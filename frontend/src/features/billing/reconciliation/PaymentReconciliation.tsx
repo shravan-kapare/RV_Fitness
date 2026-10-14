@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Scale, AlertCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
 import {
   useReconciliations,
   useCreateReconciliation,
@@ -57,44 +57,49 @@ export const PaymentReconciliation: React.FC = () => {
       key: 'reconciliationDate',
       header: 'Audit Date',
       render: (r: ReconciliationRecord) => (
-        <span className="font-semibold text-white text-xs">{formatDate(r.reconciliationDate)}</span>
+        <span className="font-semibold text-[#F5F5F5] text-xs">{formatDate(r.reconciliationDate)}</span>
       ),
     },
     {
       key: 'period',
       header: 'Audit Period',
       render: (r: ReconciliationRecord) => (
-        <span className="text-gray-300 text-xs">
+        <span className="text-[#A5A5A5] text-xs">
           {formatDate(r.periodStart)} – {formatDate(r.periodEnd)}
         </span>
       ),
     },
     {
       key: 'recordedTotalPaisa',
-      header: 'System Ledger Total',
+      header: 'Ledger Recorded',
+      align: 'right',
       render: (r: ReconciliationRecord) => (
-        <span className="font-bold text-white text-xs">{formatCurrency(r.recordedTotalPaisa)}</span>
+        <span className="font-mono font-bold tabular-nums text-[#F5F5F5] text-xs">
+          {formatCurrency(r.recordedTotalPaisa)}
+        </span>
       ),
     },
     {
       key: 'declaredTotalPaisa',
       header: 'Declared Total',
+      align: 'right',
       render: (r: ReconciliationRecord) => (
-        <span className="text-gray-300 text-xs">
+        <span className="font-mono tabular-nums text-[#A5A5A5] text-xs">
           {r.declaredTotalPaisa ? formatCurrency(r.declaredTotalPaisa) : 'N/A'}
         </span>
       ),
     },
     {
       key: 'discrepancyPaisa',
-      header: 'Discrepancy Variance',
+      header: 'Variance',
+      align: 'right',
       render: (r: ReconciliationRecord) => {
         const disc = Number(r.discrepancyPaisa || 0);
         if (disc === 0) {
-          return <span className="text-emerald-400 font-bold text-xs">₹0.00 (Balanced)</span>;
+          return <span className="font-mono font-bold text-emerald-400 text-xs">₹0.00 (Balanced)</span>;
         }
         return (
-          <span className="text-rose-400 font-bold text-xs">
+          <span className="font-mono font-bold text-rose-400 text-xs">
             {disc > 0 ? `+${formatCurrency(disc)}` : formatCurrency(disc)}
           </span>
         );
@@ -102,7 +107,7 @@ export const PaymentReconciliation: React.FC = () => {
     },
     {
       key: 'status',
-      header: 'Reconciliation Status',
+      header: 'Audit Status',
       render: (r: ReconciliationRecord) => (
         <span
           className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
@@ -128,7 +133,7 @@ export const PaymentReconciliation: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => handleResolve(r.id)}
-              className="text-xs px-2.5 py-1 h-auto"
+              className="text-xs px-2.5 py-1 h-auto text-amber-400 hover:text-white"
             >
               Resolve
             </Button>
@@ -139,12 +144,14 @@ export const PaymentReconciliation: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-12">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Payment Reconciliation</h2>
-          <p className="text-xs text-gray-400">
-            Compare recorded ledger collections with declared bank statements and cash handovers
+          <h1 className="text-xl font-black text-[#F5F5F5] tracking-tight uppercase">
+            Payment Reconciliation
+          </h1>
+          <p className="text-xs text-[#A5A5A5] mt-0.5">
+            Audit system ledger records against physical cash drawers and bank statements
           </p>
         </div>
 
@@ -164,18 +171,19 @@ export const PaymentReconciliation: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Conduct Financial Reconciliation"
+        title="Conduct Financial Reconciliation Audit"
       >
         <form onSubmit={handleCreate} className="space-y-4">
           {error && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400">
-              {error}
+            <div className="p-3.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
           <div>
             <Input
-              label="Reconciliation Date *"
+              label="Audit Date *"
               type="date"
               value={reconciliationDate}
               onChange={(e) => setReconciliationDate(e.target.value)}
@@ -200,13 +208,15 @@ export const PaymentReconciliation: React.FC = () => {
           />
 
           <div>
-            <label className="block text-xs font-medium text-gray-300 mb-1">Audit Notes</label>
+            <label className="block text-xs font-bold text-[#F5F5F5] uppercase tracking-wider mb-1.5">
+              Auditor Remarks
+            </label>
             <textarea
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Verified against SBI Current Account statement"
-              className="w-full p-2.5 text-xs rounded-lg bg-[#161616] border border-[#333] text-white focus:border-[#F59E0B]"
+              placeholder="e.g. Verified against SBI Current Account & cash drawer counter..."
+              className="w-full p-2.5 text-xs rounded-lg bg-[#171717] border border-[#292929] text-[#F5F5F5] focus:outline-none focus:border-[#FFC21A]"
             />
           </div>
 

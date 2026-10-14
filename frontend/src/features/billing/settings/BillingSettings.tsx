@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle, ShieldCheck, Settings } from 'lucide-react';
+import { CheckCircle, ShieldCheck, Settings, Hash, Percent, Building2 } from 'lucide-react';
 import { useSettings, useUpdateSetting } from '@/hooks/useSettings';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -36,7 +36,7 @@ export const BillingSettings: React.FC = () => {
     const val = formState[key];
     if (val !== undefined) {
       await updateSetting({ key, value: val });
-      setSuccessMessage(`Updated setting: ${key}`);
+      setSuccessMessage(`Saved: ${key}`);
       setTimeout(() => setSuccessMessage(null), 3000);
       refetch();
     }
@@ -53,27 +53,31 @@ export const BillingSettings: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in pb-12">
       <div>
-        <h2 className="text-xl font-bold text-white tracking-tight">Billing Configuration</h2>
-        <p className="text-xs text-gray-400">
-          Gym metadata, prefix generators, default tax rates, and fiscal parameters
+        <h1 className="text-xl font-black text-[#F5F5F5] tracking-tight uppercase">
+          Billing & Fiscal Configuration
+        </h1>
+        <p className="text-xs text-[#A5A5A5] mt-0.5">
+          Gym legal metadata, document prefix generators, default tax rates, and overdue parameters
         </p>
       </div>
 
       {successMessage && (
         <div className="p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-400 flex items-center gap-2">
-          <CheckCircle className="w-4 h-4" />
+          <CheckCircle className="w-4 h-4 shrink-0" />
           <span>{successMessage}</span>
         </div>
       )}
 
       {/* Gym Identification Card */}
-      <Card className="p-6 border-[#262626] space-y-4">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-[#F59E0B]" />
-          <span>Gym Profile & Tax Identification</span>
-        </h3>
+      <div className="p-6 rounded-xl bg-[#111111] border border-[#292929] space-y-5">
+        <div className="flex items-center gap-2 pb-3 border-b border-[#292929]">
+          <Building2 className="w-4 h-4 text-[#FFC21A]" />
+          <h2 className="text-xs font-bold text-[#F5F5F5] uppercase tracking-wider">
+            Gym Profile & Tax Identification
+          </h2>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <Input
               label="Legal Facility Name"
@@ -84,9 +88,9 @@ export const BillingSettings: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => handleSave('GYM_NAME')}
-              className="mt-2 text-xs"
+              className="mt-2.5 text-xs"
             >
-              Save Name
+              Update Name
             </Button>
           </div>
 
@@ -100,9 +104,9 @@ export const BillingSettings: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => handleSave('GSTIN')}
-              className="mt-2 text-xs"
+              className="mt-2.5 text-xs"
             >
-              Save GSTIN
+              Update GSTIN
             </Button>
           </div>
 
@@ -119,22 +123,24 @@ export const BillingSettings: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => handleSave('GYM_ADDRESS')}
-              className="mt-2 text-xs"
+              className="mt-2.5 text-xs"
             >
-              Save Address
+              Update Address
             </Button>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Numbering & Prefixes */}
-      <Card className="p-6 border-[#262626] space-y-4">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-          <Settings className="w-4 h-4 text-[#F59E0B]" />
-          <span>Financial Document Prefixes</span>
-        </h3>
+      <div className="p-6 rounded-xl bg-[#111111] border border-[#292929] space-y-5">
+        <div className="flex items-center gap-2 pb-3 border-b border-[#292929]">
+          <Hash className="w-4 h-4 text-[#FFC21A]" />
+          <h2 className="text-xs font-bold text-[#F5F5F5] uppercase tracking-wider">
+            Sequential Document Prefixes
+          </h2>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <Input
               label="Invoice Number Prefix"
@@ -145,9 +151,9 @@ export const BillingSettings: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => handleSave('INVOICE_PREFIX')}
-              className="mt-2 text-xs"
+              className="mt-2.5 text-xs"
             >
-              Update Prefix
+              Update Invoice Prefix
             </Button>
           </div>
 
@@ -161,22 +167,24 @@ export const BillingSettings: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => handleSave('RECEIPT_PREFIX')}
-              className="mt-2 text-xs"
+              className="mt-2.5 text-xs"
             >
-              Update Prefix
+              Update Receipt Prefix
             </Button>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Tax & Overdue Policies */}
-      <Card className="p-6 border-[#262626] space-y-4">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-          <Settings className="w-4 h-4 text-[#F59E0B]" />
-          <span>Tax Defaults & Aging Thresholds</span>
-        </h3>
+      <div className="p-6 rounded-xl bg-[#111111] border border-[#292929] space-y-5">
+        <div className="flex items-center gap-2 pb-3 border-b border-[#292929]">
+          <Percent className="w-4 h-4 text-[#FFC21A]" />
+          <h2 className="text-xs font-bold text-[#F5F5F5] uppercase tracking-wider">
+            Tax Defaults & Aging Parameters
+          </h2>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div>
             <Input
               label="Default GST Tax Rate (Basis Points: 1800 = 18%)"
@@ -188,9 +196,9 @@ export const BillingSettings: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => handleSave('DEFAULT_TAX_RATE_BPS')}
-              className="mt-2 text-xs"
+              className="mt-2.5 text-xs"
             >
-              Update Tax Rate
+              Update Default Tax
             </Button>
           </div>
 
@@ -205,13 +213,13 @@ export const BillingSettings: React.FC = () => {
               variant="secondary"
               size="sm"
               onClick={() => handleSave('OVERDUE_GRACE_DAYS')}
-              className="mt-2 text-xs"
+              className="mt-2.5 text-xs"
             >
               Update Grace Period
             </Button>
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

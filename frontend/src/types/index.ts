@@ -356,15 +356,18 @@ export interface GymSetting {
   updatedAt: string;
 }
 
-// Reports & Dashboard
 export interface DashboardStats {
   totalRevenuePaisa: number;
-  outstandingPaisa: number;
-  overdueInvoicesCount: number;
+  totalInvoicedPaisa?: number;
+  totalOutstandingPaisa?: number;
+  outstandingPaisa?: number;
+  overdueCount?: number;
+  overdueInvoicesCount?: number;
+  overdueAmountPaisa?: number;
   todayCollectionsPaisa: number;
-  totalInvoicesCount: number;
-  paidInvoicesCount: number;
-  collectionsByMethod: {
+  totalInvoicesCount?: number;
+  paidInvoicesCount?: number;
+  collectionsByMethod?: {
     method: PaymentMethod;
     amountPaisa: number;
     count: number;

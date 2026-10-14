@@ -1,6 +1,5 @@
 import React from 'react';
 import clsx from 'clsx';
-import { TrendingUp, TrendingDown } from 'lucide-react';
 
 export interface StatCardProps {
   label?: string;
@@ -28,26 +27,31 @@ export const StatCard: React.FC<StatCardProps> = ({
 }) => {
   const displayLabel = title || label || '';
   const displaySubtext = description || subtext;
+
   return (
     <div
       className={clsx(
-        'relative rounded-xl p-5 border transition-all duration-200 overflow-hidden',
+        'relative rounded-xl p-5 border transition-all duration-150 overflow-hidden bg-[#111111]',
         highlight
-          ? 'bg-gradient-to-br from-[#1E1911] to-[#121212] border-[#F59E0B]/40 shadow-lg shadow-[#F59E0B]/5'
-          : 'bg-[#111111] border-[#333333] hover:border-[#444444]'
+          ? 'border-[#FFC21A]/40 bg-gradient-to-b from-[#19160E] to-[#111111]'
+          : 'border-[#292929] hover:border-[#383838]'
       )}
     >
+      {highlight && (
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-[#FFC21A]" />
+      )}
+
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-[#A5A5A5]">
           {displayLabel}
         </span>
         {icon && (
           <div
             className={clsx(
-              'w-10 h-10 rounded-lg flex items-center justify-center border',
+              'w-8 h-8 rounded-lg flex items-center justify-center border text-xs',
               highlight
-                ? 'bg-[#F59E0B]/10 border-[#F59E0B]/30 text-[#F59E0B]'
-                : 'bg-[#181818] border-[#2A2A2A] text-gray-300'
+                ? 'bg-[#FFC21A]/10 border-[#FFC21A]/20 text-[#FFC21A]'
+                : 'bg-[#171717] border-[#292929] text-[#A5A5A5]'
             )}
           >
             {icon}
@@ -55,27 +59,26 @@ export const StatCard: React.FC<StatCardProps> = ({
         )}
       </div>
 
-      <div className="mt-4">
-        <div className="text-2xl font-bold tracking-tight text-white">{value}</div>
+      <div className="mt-3">
+        <div className="text-2xl font-bold tracking-tight text-[#F5F5F5] tabular-nums">
+          {value}
+        </div>
 
         {(displaySubtext || trend) && (
-          <div className="flex items-center gap-2 mt-1.5 text-xs">
+          <div className="mt-1 flex items-center gap-2 text-xs">
             {trend && (
               <span
                 className={clsx(
-                  'flex items-center font-semibold gap-0.5',
-                  trend.isPositive ? 'text-emerald-400' : 'text-red-400'
+                  'font-medium tabular-nums',
+                  trend.isPositive ? 'text-emerald-400' : 'text-rose-400'
                 )}
               >
-                {trend.isPositive ? (
-                  <TrendingUp className="w-3.5 h-3.5" />
-                ) : (
-                  <TrendingDown className="w-3.5 h-3.5" />
-                )}
-                {trend.value}%
+                {trend.isPositive ? '+' : '-'}{Math.abs(trend.value)}%
               </span>
             )}
-            {displaySubtext && <span className="text-gray-400">{displaySubtext}</span>}
+            {displaySubtext && (
+              <span className="text-[#737373] truncate">{displaySubtext}</span>
+            )}
           </div>
         )}
       </div>

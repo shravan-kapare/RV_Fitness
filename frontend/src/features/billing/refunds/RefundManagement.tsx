@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, RotateCcw, AlertCircle, ArrowUpRight, Check, X, ShieldAlert } from 'lucide-react';
 import {
   useRefunds,
   useRequestRefund,
@@ -13,7 +13,7 @@ import { Table, Column } from '@/components/ui/Table';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
-import { formatCurrency, rupeesToPaisa } from '@/lib/formatters';
+import { formatCurrency, rupeesToPaisa, formatDate } from '@/lib/formatters';
 import { Refund, RefundMethod, Payment } from '@/types';
 
 export const RefundManagement: React.FC = () => {
@@ -105,34 +105,41 @@ export const RefundManagement: React.FC = () => {
       key: 'refundNumber',
       header: 'Refund #',
       render: (r: Refund) => (
-        <span className="font-semibold text-white tracking-wide">{r.refundNumber}</span>
+        <span className="font-mono font-bold text-[#F5F5F5] tracking-wide text-xs">
+          {r.refundNumber}
+        </span>
       ),
     },
     {
       key: 'payment',
-      header: 'Payment Reference',
+      header: 'Original Payment',
       render: (r: Refund) => (
         <div>
-          <span className="text-white text-xs">{r.payment?.paymentNumber}</span>
-          <p className="text-[10px] text-gray-400">Orig: {formatCurrency(r.payment?.amountPaisa || 0)}</p>
+          <span className="font-mono text-xs text-[#F5F5F5]">{r.payment?.paymentNumber}</span>
+          <p className="text-[10px] font-mono tabular-nums text-[#A5A5A5]">
+            Orig: {formatCurrency(r.payment?.amountPaisa || 0)}
+          </p>
         </div>
       ),
     },
     {
       key: 'member',
-      header: 'Member',
+      header: 'Member Name',
       render: (r: Refund) => (
         <div>
-          <p className="text-white font-medium">{r.member?.user?.fullName || 'N/A'}</p>
-          <p className="text-[11px] text-gray-400">{r.member?.memberCode}</p>
+          <p className="text-[#F5F5F5] font-semibold text-xs">{r.member?.user?.fullName || 'N/A'}</p>
+          <p className="text-[10px] font-mono text-[#A5A5A5]">{r.member?.memberCode}</p>
         </div>
       ),
     },
     {
       key: 'amountPaisa',
-      header: 'Refunded Amount',
+      header: 'Refund Amount',
+      align: 'right',
       render: (r: Refund) => (
-        <span className="font-bold text-rose-400">{formatCurrency(r.amountPaisa)}</span>
+        <span className="font-mono font-bold tabular-nums text-rose-400 text-xs">
+          {formatCurrency(r.amountPaisa)}
+        </span>
       ),
     },
     {
@@ -143,7 +150,11 @@ export const RefundManagement: React.FC = () => {
     {
       key: 'reason',
       header: 'Audit Reason',
-      render: (r: Refund) => <span className="text-gray-300 text-xs italic">{r.reason}</span>,
+      render: (r: Refund) => (
+        <span className="text-[#A5A5A5] text-xs max-w-xs truncate block" title={r.reason}>
+          {r.reason}
+        </span>
+      ),
     },
     {
       key: 'actions',
@@ -157,7 +168,7 @@ export const RefundManagement: React.FC = () => {
                 variant="secondary"
                 size="sm"
                 onClick={() => handleApprove(r.id)}
-                className="text-xs px-2 py-1 h-auto text-emerald-400 hover:text-white"
+                className="text-xs px-2.5 py-1 h-auto text-emerald-400 hover:text-white"
               >
                 Approve
               </Button>
@@ -165,7 +176,7 @@ export const RefundManagement: React.FC = () => {
                 variant="danger"
                 size="sm"
                 onClick={() => handleReject(r.id)}
-                className="text-xs px-2 py-1 h-auto"
+                className="text-xs px-2.5 py-1 h-auto"
               >
                 Reject
               </Button>
@@ -177,9 +188,9 @@ export const RefundManagement: React.FC = () => {
               variant="primary"
               size="sm"
               onClick={() => handleProcess(r.id)}
-              className="text-xs px-2 py-1 h-auto"
+              className="text-xs px-2.5 py-1 h-auto"
             >
-              Disburse / Process
+              Disburse Funds
             </Button>
           )}
         </div>
@@ -188,12 +199,14 @@ export const RefundManagement: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-12">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Refund & Reversal Management</h2>
-          <p className="text-xs text-gray-400">
-            Immutable settlement rollback with linked adjustment tracking
+          <h1 className="text-xl font-black text-[#F5F5F5] tracking-tight uppercase">
+            Refund & Reversal Management
+          </h1>
+          <p className="text-xs text-[#A5A5A5] mt-0.5">
+            Two-step approval workflow for membership reversals and audited payment rollbacks
           </p>
         </div>
 
@@ -217,22 +230,23 @@ export const RefundManagement: React.FC = () => {
       >
         <form onSubmit={handleSubmitRequest} className="space-y-4">
           {error && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400">
-              {error}
+            <div className="p-3.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-medium text-gray-300 mb-1">
-              Select Confirmed Payment *
+            <label className="block text-xs font-bold text-[#F5F5F5] uppercase tracking-wider mb-1.5">
+              Select Confirmed Payment <span className="text-red-400">*</span>
             </label>
             <select
               value={paymentId}
               onChange={(e) => handlePaymentSelect(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg bg-[#161616] border border-[#333] text-xs text-white focus:border-[#F59E0B]"
+              className="w-full h-10 px-3 rounded-lg bg-[#171717] border border-[#292929] text-xs text-[#F5F5F5] focus:outline-none focus:border-[#FFC21A]"
               required
             >
-              <option value="">-- Choose Transaction --</option>
+              <option value="">-- Choose Transaction to Refund --</option>
               {confirmedPayments.map((p: Payment) => (
                 <option key={p.id} value={p.id}>
                   {p.paymentNumber} — {p.member?.user?.fullName} ({formatCurrency(p.amountPaisa)})
@@ -242,16 +256,16 @@ export const RefundManagement: React.FC = () => {
           </div>
 
           {selectedPayment && (
-            <div className="p-3 rounded-lg bg-[#161616] border border-[#222] text-xs space-y-1">
+            <div className="p-3.5 rounded-lg bg-[#171717] border border-[#292929] text-xs space-y-1.5">
               <div className="flex justify-between">
-                <span className="text-gray-400">Original Amount:</span>
-                <span className="font-semibold text-white">
+                <span className="text-[#A5A5A5]">Original Amount:</span>
+                <span className="font-mono font-bold text-[#F5F5F5]">
                   {formatCurrency(selectedPayment.amountPaisa)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Invoice:</span>
-                <span className="text-white">{selectedPayment.invoice?.invoiceNumber}</span>
+                <span className="text-[#A5A5A5]">Invoice Number:</span>
+                <span className="font-mono text-[#FFC21A]">{selectedPayment.invoice?.invoiceNumber}</span>
               </div>
             </div>
           )}
@@ -269,13 +283,15 @@ export const RefundManagement: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-300 mb-1">Refund Method *</label>
+            <label className="block text-xs font-bold text-[#F5F5F5] uppercase tracking-wider mb-1.5">
+              Refund Disbursement Method <span className="text-red-400">*</span>
+            </label>
             <select
               value={method}
               onChange={(e) => setMethod(e.target.value as RefundMethod)}
-              className="w-full h-10 px-3 rounded-lg bg-[#161616] border border-[#333] text-xs text-white focus:border-[#F59E0B]"
+              className="w-full h-10 px-3 rounded-lg bg-[#171717] border border-[#292929] text-xs text-[#F5F5F5] focus:outline-none focus:border-[#FFC21A]"
             >
-              <option value="CASH">Cash Counter</option>
+              <option value="CASH">Cash Counter Disbursal</option>
               <option value="UPI">UPI Reversal</option>
               <option value="BANK_TRANSFER">Bank Transfer (NEFT/IMPS)</option>
               <option value="ORIGINAL_METHOD">Original Payment Method</option>
@@ -285,7 +301,7 @@ export const RefundManagement: React.FC = () => {
           <div>
             <Input
               label="Reason for Refund / Adjustment *"
-              placeholder="e.g. Member relocation, medical cancellation, plan downgrade"
+              placeholder="e.g. Member medical cancellation, relocation, plan downgrade"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               required

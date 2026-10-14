@@ -14,23 +14,23 @@ export const Badge: React.FC<BadgeProps> = ({
   ...props
 }) => {
   const variants = {
-    success: 'bg-emerald-950/70 text-emerald-400 border border-emerald-800/60',
-    warning: 'bg-amber-950/70 text-amber-300 border border-amber-800/60',
-    danger: 'bg-red-950/70 text-red-400 border border-red-800/60',
-    info: 'bg-blue-950/70 text-blue-300 border border-blue-800/60',
-    gold: 'bg-[#F59E0B]/10 text-[#FBBF24] border border-[#F59E0B]/30',
-    default: 'bg-[#222222] text-gray-300 border border-[#333333]',
+    success: 'bg-emerald-950/40 text-emerald-400 border border-emerald-800/40',
+    warning: 'bg-amber-950/40 text-amber-300 border border-amber-800/40',
+    danger: 'bg-rose-950/40 text-rose-400 border border-rose-800/40',
+    info: 'bg-sky-950/40 text-sky-300 border border-sky-800/40',
+    gold: 'bg-[#FFC21A]/10 text-[#FFC21A] border border-[#FFC21A]/30',
+    default: 'bg-[#1C1C1C] text-[#A5A5A5] border border-[#292929]',
   };
 
   const sizes = {
-    sm: 'text-[10px] px-2 py-0.5 font-medium',
-    md: 'text-xs px-2.5 py-1 font-medium',
+    sm: 'text-[10px] px-2 py-0.5 font-semibold',
+    md: 'text-[11px] px-2.5 py-0.5 font-semibold',
   };
 
   return (
     <span
       className={clsx(
-        'inline-flex items-center gap-1 rounded-full uppercase tracking-wider select-none font-semibold',
+        'inline-flex items-center gap-1 rounded-full uppercase tracking-wider select-none',
         variants[variant],
         sizes[size],
         className

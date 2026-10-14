@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Clock, AlertTriangle, AlertCircle, ArrowUpRight, Filter } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Clock, AlertTriangle, AlertCircle, ArrowUpRight, CreditCard, ChevronRight } from 'lucide-react';
 import { useOutstandingReport } from '@/hooks/useReports';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Table, Column } from '@/components/ui/Table';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import { Invoice } from '@/types';
 
 export const OutstandingBalances: React.FC = () => {
   const navigate = useNavigate();
@@ -42,7 +41,7 @@ export const OutstandingBalances: React.FC = () => {
   });
 
   const agingBuckets = [
-    { id: 'ALL', label: 'All Outstanding', count: invoicesWithAging.length },
+    { id: 'ALL', label: 'All Dues', count: invoicesWithAging.length },
     {
       id: 'CURRENT',
       label: 'Current (Not Due)',
@@ -50,17 +49,17 @@ export const OutstandingBalances: React.FC = () => {
     },
     {
       id: '1-30',
-      label: '1 - 30 Days Overdue',
+      label: '1 – 30 Days',
       count: invoicesWithAging.filter((i: any) => i.bucket === '1-30').length,
     },
     {
       id: '31-60',
-      label: '31 - 60 Days Overdue',
+      label: '31 – 60 Days',
       count: invoicesWithAging.filter((i: any) => i.bucket === '31-60').length,
     },
     {
       id: '61-90',
-      label: '61 - 90 Days Overdue',
+      label: '61 – 90 Days',
       count: invoicesWithAging.filter((i: any) => i.bucket === '61-90').length,
     },
     {
@@ -75,44 +74,55 @@ export const OutstandingBalances: React.FC = () => {
       key: 'invoiceNumber',
       header: 'Invoice #',
       render: (inv) => (
-        <span className="font-semibold text-white tracking-wide">{inv.invoiceNumber}</span>
+        <span className="font-mono font-bold text-[#F5F5F5] text-xs tracking-wide">
+          {inv.invoiceNumber}
+        </span>
       ),
     },
     {
       key: 'member',
-      header: 'Member',
+      header: 'Member Name',
       render: (inv) => (
         <div>
-          <p className="text-white font-medium">{inv.member?.user?.fullName || 'N/A'}</p>
-          <p className="text-[11px] text-gray-400">{inv.member?.memberCode}</p>
+          <p className="text-[#F5F5F5] font-semibold text-xs">{inv.member?.user?.fullName || 'N/A'}</p>
+          <p className="text-[10px] font-mono text-[#A5A5A5]">{inv.member?.memberCode}</p>
         </div>
       ),
     },
     {
       key: 'totalPaisa',
-      header: 'Invoice Total',
+      header: 'Billed',
+      align: 'right',
       render: (inv) => (
-        <span className="text-gray-300 font-medium">{formatCurrency(inv.totalPaisa)}</span>
+        <span className="font-mono tabular-nums text-xs text-[#A5A5A5]">
+          {formatCurrency(inv.totalPaisa)}
+        </span>
       ),
     },
     {
       key: 'paidPaisa',
-      header: 'Amount Paid',
+      header: 'Collected',
+      align: 'right',
       render: (inv) => (
-        <span className="text-emerald-400 font-medium">{formatCurrency(inv.paidPaisa)}</span>
+        <span className="font-mono tabular-nums text-xs text-emerald-400">
+          {formatCurrency(inv.paidPaisa)}
+        </span>
       ),
     },
     {
       key: 'balancePaisa',
-      header: 'Outstanding Balance',
+      header: 'Balance Due',
+      align: 'right',
       render: (inv) => (
-        <span className="font-bold text-amber-400">{formatCurrency(inv.balancePaisa)}</span>
+        <span className="font-mono font-bold tabular-nums text-xs text-[#FFC21A]">
+          {formatCurrency(inv.balancePaisa)}
+        </span>
       ),
     },
     {
       key: 'dueDate',
       header: 'Due Date',
-      render: (inv) => <span className="text-gray-300 text-xs">{formatDate(inv.dueDate)}</span>,
+      render: (inv) => <span className="text-[#A5A5A5] text-xs">{formatDate(inv.dueDate)}</span>,
     },
     {
       key: 'daysOverdue',
@@ -133,7 +143,7 @@ export const OutstandingBalances: React.FC = () => {
                 : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
             }`}
           >
-            {inv.daysOverdue} days overdue
+            {inv.daysOverdue}d overdue
           </span>
         );
       },
@@ -145,20 +155,21 @@ export const OutstandingBalances: React.FC = () => {
       render: (inv) => (
         <div className="flex items-center justify-end gap-2">
           <Button
-            variant="secondary"
+            variant="primary"
             size="sm"
             onClick={() => navigate(`/payments/record?invoiceId=${inv.id}`)}
             className="text-xs px-2.5 py-1 h-auto"
           >
-            Collect
+            <CreditCard className="w-3 h-3 mr-1" />
+            <span>Collect</span>
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => navigate(`/invoices/${inv.id}`)}
-            className="text-xs px-2 py-1 h-auto text-gray-400 hover:text-white"
+            className="text-xs px-2 py-1 h-auto text-[#A5A5A5] hover:text-[#F5F5F5] hover:bg-[#1E1E1E]"
           >
-            <ArrowUpRight className="w-4 h-4" />
+            <ArrowUpRight className="w-3.5 h-3.5" />
           </Button>
         </div>
       ),
@@ -168,39 +179,47 @@ export const OutstandingBalances: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h2 className="text-xl font-bold text-white tracking-tight">Outstanding Balances & Aging</h2>
-        <p className="text-xs text-gray-400">
-          Monitor uncollected gym dues categorized by payment delinquency brackets
+        <h1 className="text-xl font-black text-[#F5F5F5] tracking-tight uppercase">
+          Outstanding Balances & Aging
+        </h1>
+        <p className="text-xs text-[#A5A5A5] mt-0.5">
+          Monitor uncollected membership fees and overdue balances categorized by delinquency aging
         </p>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-5 border-[#262626]">
-          <span className="text-xs text-gray-400 font-medium block">Total Receivables</span>
-          <span className="text-2xl font-black text-amber-400 mt-1 block">
+      {/* KPI Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="p-5 rounded-xl bg-[#111111] border border-[#292929]">
+          <span className="text-[10px] uppercase font-bold text-[#A5A5A5] tracking-wider block">
+            Total Receivables
+          </span>
+          <span className="text-2xl font-black font-mono tabular-nums text-[#FFC21A] mt-1 block">
             {formatCurrency(report?.totalOutstandingPaisa || 0)}
           </span>
-          <span className="text-[11px] text-gray-400 mt-1 block">
+          <span className="text-[11px] text-[#737373] mt-1 block">
             Across {invoicesWithAging.length} open invoices
           </span>
-        </Card>
+        </div>
 
-        <Card className="p-5 border-[#262626]">
-          <span className="text-xs text-gray-400 font-medium block">Overdue Invoices</span>
-          <span className="text-2xl font-black text-rose-400 mt-1 block">
+        <div className="p-5 rounded-xl bg-[#111111] border border-[#292929]">
+          <span className="text-[10px] uppercase font-bold text-[#A5A5A5] tracking-wider block">
+            Overdue Dues (Critical)
+          </span>
+          <span className="text-2xl font-black font-mono tabular-nums text-rose-400 mt-1 block">
             {invoicesWithAging.filter((i: any) => i.daysOverdue > 0).length}
           </span>
-          <span className="text-[11px] text-gray-400 mt-1 block">Past scheduled due date</span>
-        </Card>
+          <span className="text-[11px] text-[#737373] mt-1 block">Past scheduled due date</span>
+        </div>
 
-        <Card className="p-5 border-[#262626]">
-          <span className="text-xs text-gray-400 font-medium block">Current (Within Term)</span>
-          <span className="text-2xl font-black text-emerald-400 mt-1 block">
+        <div className="p-5 rounded-xl bg-[#111111] border border-[#292929]">
+          <span className="text-[10px] uppercase font-bold text-[#A5A5A5] tracking-wider block">
+            Current (Within Terms)
+          </span>
+          <span className="text-2xl font-black font-mono tabular-nums text-emerald-400 mt-1 block">
             {invoicesWithAging.filter((i: any) => i.daysOverdue === 0).length}
           </span>
-          <span className="text-[11px] text-gray-400 mt-1 block">Awaiting payment term</span>
-        </Card>
+          <span className="text-[11px] text-[#737373] mt-1 block">Awaiting payment term</span>
+        </div>
       </div>
 
       {/* Aging Category Filters */}
@@ -209,14 +228,20 @@ export const OutstandingBalances: React.FC = () => {
           <button
             key={bucket.id}
             onClick={() => setSelectedAging(bucket.id)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all flex items-center gap-2 ${
               selectedAging === bucket.id
-                ? 'bg-[#F59E0B]/20 border-[#F59E0B] text-[#F59E0B]'
-                : 'bg-[#141414] border-[#2E2E2E] text-gray-300 hover:bg-[#1C1C1C]'
+                ? 'bg-[#FFC21A] border-[#FFC21A] text-[#080808] shadow-sm'
+                : 'bg-[#111111] border-[#292929] text-[#A5A5A5] hover:text-[#F5F5F5] hover:border-[#3B3B3B]'
             }`}
           >
             <span>{bucket.label}</span>
-            <span className="px-1.5 py-0.2 rounded-full bg-[#222] text-[10px] text-gray-300 font-bold">
+            <span
+              className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                selectedAging === bucket.id
+                  ? 'bg-[#080808]/20 text-[#080808]'
+                  : 'bg-[#171717] text-[#D4D4D4]'
+              }`}
+            >
               {bucket.count}
             </span>
           </button>

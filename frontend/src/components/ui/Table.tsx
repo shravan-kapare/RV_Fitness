@@ -1,4 +1,4 @@
-import React, { ReactNode, HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes } from 'react';
+import React, { ReactNode } from 'react';
 import clsx from 'clsx';
 import { LoadingSpinner } from './LoadingSpinner';
 
@@ -28,15 +28,15 @@ export function Table<T extends Record<string, any>>({
   className,
 }: DataTableProps<T>) {
   return (
-    <div className={clsx('w-full overflow-x-auto rounded-xl border border-[#262626] bg-[#111111]', className)}>
-      <table className="w-full text-left text-xs text-gray-200 border-collapse">
-        <thead className="bg-[#161616] border-b border-[#262626] text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+    <div className={clsx('w-full overflow-x-auto rounded-xl border border-[#292929] bg-[#111111]', className)}>
+      <table className="w-full text-left text-xs text-[#F5F5F5] border-collapse">
+        <thead className="bg-[#141414] border-b border-[#292929] text-[11px] font-semibold uppercase tracking-wider text-[#A5A5A5]">
           <tr>
             {columns.map((col) => (
               <th
                 key={col.key}
                 className={clsx(
-                  'px-4 py-3.5 select-none',
+                  'px-4 py-3 select-none',
                   col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left',
                   col.className
                 )}
@@ -49,97 +49,53 @@ export function Table<T extends Record<string, any>>({
         <tbody className="divide-y divide-[#1F1F1F]">
           {isLoading ? (
             <tr>
-              <td colSpan={columns.length} className="py-12 text-center text-gray-400">
+              <td colSpan={columns.length} className="py-12 text-center text-[#A5A5A5]">
                 <div className="flex justify-center items-center gap-2">
                   <LoadingSpinner size="md" />
-                  <span>Loading data...</span>
+                  <span>Loading records...</span>
                 </div>
               </td>
             </tr>
           ) : data.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="py-10 text-center text-gray-400">
-                {emptyMessage}
+              <td colSpan={columns.length} className="py-12 text-center text-[#737373]">
+                <div className="flex flex-col items-center justify-center gap-1">
+                  <p className="text-sm font-medium text-[#A5A5A5]">{emptyMessage}</p>
+                </div>
               </td>
             </tr>
           ) : (
-            data.map((item, idx) => (
-              <tr
-                key={item.id || idx}
-                onClick={() => onRowClick && onRowClick(item)}
-                className={clsx(
-                  'transition-colors duration-150',
-                  onRowClick ? 'cursor-pointer hover:bg-[#1A1A1A]' : 'hover:bg-[#161616]'
-                )}
-              >
-                {columns.map((col) => (
-                  <td
-                    key={col.key}
-                    className={clsx(
-                      'px-4 py-3.5 whitespace-nowrap',
-                      col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left',
-                      col.className
-                    )}
-                  >
-                    {col.render ? col.render(item) : item[col.key]}
-                  </td>
-                ))}
-              </tr>
-            ))
+            data.map((item, index) => {
+              const rowId = item.id || `row-${index}`;
+              const isClickable = Boolean(onRowClick);
+
+              return (
+                <tr
+                  key={rowId}
+                  onClick={() => onRowClick && onRowClick(item)}
+                  className={clsx(
+                    'transition-colors duration-100',
+                    isClickable ? 'cursor-pointer hover:bg-[#181818]' : 'hover:bg-[#151515]'
+                  )}
+                >
+                  {columns.map((col) => (
+                    <td
+                      key={`${rowId}-${col.key}`}
+                      className={clsx(
+                        'px-4 py-3 text-xs',
+                        col.align === 'right' ? 'text-right tabular-nums' : col.align === 'center' ? 'text-center' : 'text-left',
+                        col.className
+                      )}
+                    >
+                      {col.render ? col.render(item) : item[col.key]}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>
     </div>
   );
 }
-
-// Low-level component primitives for custom table assemblies
-export const RawTable: React.FC<HTMLAttributes<HTMLTableElement>> = ({ className, children, ...props }) => (
-  <div className="w-full overflow-x-auto rounded-lg border border-[#333333] bg-[#111111]">
-    <table className={clsx('w-full text-left text-sm text-gray-200 border-collapse', className)} {...props}>
-      {children}
-    </table>
-  </div>
-);
-
-export const TableHeader: React.FC<HTMLAttributes<HTMLTableSectionElement>> = ({ className, children, ...props }) => (
-  <thead className={clsx('bg-[#161616] border-b border-[#2A2A2A] text-xs font-semibold uppercase tracking-wider text-gray-400', className)} {...props}>
-    {children}
-  </thead>
-);
-
-export const TableBody: React.FC<HTMLAttributes<HTMLTableSectionElement>> = ({ className, children, ...props }) => (
-  <tbody className={clsx('divide-y divide-[#222222]', className)} {...props}>
-    {children}
-  </tbody>
-);
-
-export const TableRow: React.FC<HTMLAttributes<HTMLTableRowElement> & { isClickable?: boolean }> = ({
-  className,
-  children,
-  isClickable = false,
-  ...props
-}) => (
-  <tr
-    className={clsx(
-      'transition-colors duration-150',
-      isClickable ? 'cursor-pointer hover:bg-[#1E1E1E]' : 'hover:bg-[#181818]',
-      className
-    )}
-    {...props}
-  >
-    {children}
-  </tr>
-);
-
-export const TableHead: React.FC<ThHTMLAttributes<HTMLTableCellElement>> = ({ className, children, ...props }) => (
-  <th className={clsx('px-4 py-3.5 select-none font-semibold', className)} {...props}>
-    {children}
-  </th>
-);
-
-export const TableCell: React.FC<TdHTMLAttributes<HTMLTableCellElement>> = ({ className, children, ...props }) => (
-  <td className={clsx('px-4 py-3.5 whitespace-nowrap text-sm text-gray-200', className)} {...props}>
-    {children}
-  </td>
-);

@@ -36,10 +36,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         {label && (
           <label
             htmlFor={selectId}
-            className="block text-xs font-medium text-gray-300 mb-1.5"
+            className="block text-xs font-semibold uppercase tracking-wider text-[#A5A5A5] mb-1.5"
           >
             {label}
-            {props.required && <span className="text-[#F59E0B] ml-1">*</span>}
+            {props.required && <span className="text-[#FFC21A] ml-1">*</span>}
           </label>
         )}
         <div className="relative rounded-lg shadow-sm">
@@ -48,34 +48,33 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ref={ref}
             disabled={disabled}
             className={clsx(
-              'block w-full rounded-lg bg-[#181818] border text-white text-sm appearance-none transition-colors duration-150',
-              'focus:outline-none focus:ring-1 focus:ring-[#F59E0B] focus:border-[#F59E0B]',
-              'disabled:bg-[#121212] disabled:text-gray-500 disabled:cursor-not-allowed',
+              'block w-full rounded-lg bg-[#171717] border text-[#F5F5F5] text-sm appearance-none transition-colors duration-150',
+              'focus:outline-none focus:ring-1 focus:ring-[#FFC21A] focus:border-[#FFC21A]',
+              'disabled:bg-[#101010] disabled:text-[#525252] disabled:cursor-not-allowed',
               error
-                ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-                : 'border-[#333333] hover:border-[#444444]',
-              'px-3.5 py-2.5 pr-10',
+                ? 'border-rose-500/80 focus:ring-rose-500 focus:border-rose-500'
+                : 'border-[#292929] hover:border-[#383838]',
+              'px-3.5 py-2 pr-10',
               className
             )}
             {...props}
           >
             {options
               ? options.map((opt) => (
-                  <option key={opt.value} value={opt.value} className="bg-[#181818] text-white">
+                  <option key={opt.value} value={opt.value} className="bg-[#171717] text-[#F5F5F5]">
                     {opt.label}
                   </option>
                 ))
               : children}
           </select>
-          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-gray-400">
+          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-[#737373]">
             <ChevronDown className="w-4 h-4" />
           </div>
         </div>
-        {error ? (
-          <p className="mt-1.5 text-xs text-red-400">{error}</p>
-        ) : helperText ? (
-          <p className="mt-1.5 text-xs text-gray-400">{helperText}</p>
-        ) : null}
+        {error && <p className="mt-1 text-xs text-rose-400 font-medium">{error}</p>}
+        {helperText && !error && (
+          <p className="mt-1 text-xs text-[#737373]">{helperText}</p>
+        )}
       </div>
     );
   }

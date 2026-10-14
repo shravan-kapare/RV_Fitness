@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, CreditCard, Banknote, QrCode, Building, AlertCircle } from 'lucide-react';
 import { useInvoices, useInvoice } from '@/hooks/useInvoices';
 import { useRecordPayment } from '@/hooks/usePayments';
 import { Button } from '@/components/ui/Button';
@@ -43,7 +43,7 @@ export const RecordPayment: React.FC = () => {
     setError(null);
 
     if (!selectedInvoiceId) {
-      setError('Please select an invoice to apply payment to');
+      setError('Please select an invoice to settle');
       return;
     }
     if (amountRupees <= 0) {
@@ -52,7 +52,7 @@ export const RecordPayment: React.FC = () => {
     }
 
     if ((method === 'UPI' || method === 'BANK_TRANSFER' || method === 'CARD') && !referenceNumber) {
-      setError(`Reference / Transaction number is required for ${method} offline payments`);
+      setError(`UTR / Reference identifier is mandatory for ${method} transactions`);
       return;
     }
 
@@ -69,7 +69,22 @@ export const RecordPayment: React.FC = () => {
 
       navigate(`/payments/${res.id}`);
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Failed to record payment');
+      setError(err.response?.data?.message || err.message || 'Failed to record payment transaction');
+    }
+  };
+
+  const getMethodIcon = (m: PaymentMethod) => {
+    switch (m) {
+      case 'CASH':
+        return <Banknote className="w-4 h-4 mr-1.5" />;
+      case 'UPI':
+        return <QrCode className="w-4 h-4 mr-1.5" />;
+      case 'CARD':
+        return <CreditCard className="w-4 h-4 mr-1.5" />;
+      case 'BANK_TRANSFER':
+        return <Building className="w-4 h-4 mr-1.5" />;
+      default:
+        return null;
     }
   };
 
@@ -77,33 +92,36 @@ export const RecordPayment: React.FC = () => {
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in pb-12">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
-          <ArrowLeft className="w-4 h-4 mr-1" />
+          <ArrowLeft className="w-4 h-4 mr-1.5" />
           <span>Go Back</span>
         </Button>
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Record Member Payment</h2>
-          <p className="text-xs text-gray-400">
-            Log an offline cash, UPI, card, or bank settlement
+          <h1 className="text-xl font-black text-[#F5F5F5] uppercase tracking-tight">
+            Record Member Payment
+          </h1>
+          <p className="text-xs text-[#A5A5A5]">
+            Front-desk settlement collection for RV Fitness members
           </p>
         </div>
       </div>
 
       {error && (
-        <div className="p-3.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400">
-          {error}
+        <div className="p-3.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
         </div>
       )}
 
-      <Card className="p-6 border-[#262626]">
-        <form onSubmit={handleSubmit} className="space-y-5">
+      <Card className="p-6 border-[#292929] bg-[#111111]">
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-xs font-medium text-gray-300 mb-1.5">
+            <label className="block text-xs font-bold text-[#F5F5F5] uppercase tracking-wider mb-2">
               Select Invoice to Settle <span className="text-red-400">*</span>
             </label>
             <select
               value={selectedInvoiceId}
               onChange={(e) => setSelectedInvoiceId(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg bg-[#161616] border border-[#333] text-sm text-white focus:outline-none focus:border-[#F59E0B]"
+              className="w-full h-11 px-3 rounded-lg bg-[#171717] border border-[#292929] text-sm text-[#F5F5F5] focus:outline-none focus:border-[#FFC21A] transition-colors"
               required
             >
               <option value="">-- Choose Payable Invoice --</option>
@@ -111,7 +129,7 @@ export const RecordPayment: React.FC = () => {
                 const bal = Number(inv.totalPaisa) - Number(inv.paidPaisa);
                 return (
                   <option key={inv.id} value={inv.id}>
-                    {inv.invoiceNumber} — {inv.member?.user?.fullName} (Bal: ₹{bal / 100})
+                    {inv.invoiceNumber} — {inv.member?.user?.fullName} (Due: ₹{(bal / 100).toFixed(2)})
                   </option>
                 );
               })}
@@ -119,22 +137,22 @@ export const RecordPayment: React.FC = () => {
           </div>
 
           {activeInvoice && (
-            <div className="p-4 rounded-xl bg-[#161616] border border-[#222] text-xs space-y-1.5">
+            <div className="p-4 rounded-lg bg-[#171717] border border-[#292929] text-xs space-y-2">
               <div className="flex justify-between">
-                <span className="text-gray-400">Member:</span>
-                <span className="font-semibold text-white">{activeInvoice.member?.user?.fullName}</span>
+                <span className="text-[#A5A5A5]">Member Name:</span>
+                <span className="font-semibold text-[#F5F5F5]">{activeInvoice.member?.user?.fullName}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Invoice Total:</span>
-                <span className="text-white">{formatCurrency(activeInvoice.totalPaisa)}</span>
+                <span className="text-[#A5A5A5]">Total Invoiced:</span>
+                <span className="font-mono text-[#F5F5F5]">{formatCurrency(activeInvoice.totalPaisa)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">Previously Paid:</span>
-                <span className="text-emerald-400">{formatCurrency(activeInvoice.paidPaisa)}</span>
+                <span className="text-[#A5A5A5]">Previously Settled:</span>
+                <span className="font-mono text-emerald-400">{formatCurrency(activeInvoice.paidPaisa)}</span>
               </div>
-              <div className="flex justify-between pt-1 border-t border-[#333] font-bold">
-                <span className="text-gray-300">Remaining Balance:</span>
-                <span className="text-[#F59E0B]">
+              <div className="flex justify-between pt-2 border-t border-[#292929] font-bold text-sm">
+                <span className="text-[#A5A5A5]">Outstanding Balance:</span>
+                <span className="font-mono text-[#FFC21A]">
                   {formatCurrency(Number(activeInvoice.totalPaisa) - Number(activeInvoice.paidPaisa))}
                 </span>
               </div>
@@ -143,7 +161,7 @@ export const RecordPayment: React.FC = () => {
 
           <div>
             <Input
-              label="Payment Amount (₹)"
+              label="Collection Amount (₹) *"
               type="number"
               step="0.01"
               min="1"
@@ -154,22 +172,23 @@ export const RecordPayment: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-300 mb-1.5">
+            <label className="block text-xs font-bold text-[#F5F5F5] uppercase tracking-wider mb-2">
               Payment Method <span className="text-red-400">*</span>
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {(['CASH', 'UPI', 'BANK_TRANSFER', 'CARD'] as PaymentMethod[]).map((m) => (
+              {(['CASH', 'UPI', 'CARD', 'BANK_TRANSFER'] as PaymentMethod[]).map((m) => (
                 <button
                   type="button"
                   key={m}
                   onClick={() => setMethod(m)}
-                  className={`py-2 px-3 rounded-lg text-xs font-semibold border transition-all text-center ${
+                  className={`flex items-center justify-center py-2.5 px-3 rounded-lg text-xs font-semibold border transition-all ${
                     method === m
-                      ? 'bg-[#F59E0B]/20 border-[#F59E0B] text-[#F59E0B]'
-                      : 'bg-[#161616] border-[#333] text-gray-300 hover:bg-[#222]'
+                      ? 'bg-[#FFC21A] border-[#FFC21A] text-[#080808] shadow-md font-bold'
+                      : 'bg-[#171717] border-[#292929] text-[#A5A5A5] hover:text-[#F5F5F5] hover:border-[#3B3B3B]'
                   }`}
                 >
-                  {m.replace('_', ' ')}
+                  {getMethodIcon(m)}
+                  <span>{m === 'BANK_TRANSFER' ? 'BANK' : m}</span>
                 </button>
               ))}
             </div>
@@ -177,8 +196,8 @@ export const RecordPayment: React.FC = () => {
 
           <div>
             <Input
-              label={method === 'CASH' ? 'Receipt Voucher / Desk Note (Optional)' : 'UTR / Transaction Reference *'}
-              placeholder={method === 'UPI' ? 'e.g. 332456789012' : 'Reference identifier'}
+              label={method === 'CASH' ? 'Desk Note / Cash Receipt Voucher (Optional)' : 'UTR / Transaction Reference (Mandatory) *'}
+              placeholder={method === 'UPI' ? 'e.g. 402918239012' : method === 'CARD' ? 'Auth code / Last 4 digits' : 'Bank transaction reference'}
               value={referenceNumber}
               onChange={(e) => setReferenceNumber(e.target.value)}
               required={method !== 'CASH'}
@@ -186,15 +205,15 @@ export const RecordPayment: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-300 mb-1">
-              Staff Remarks / Memo
+            <label className="block text-xs font-bold text-[#F5F5F5] uppercase tracking-wider mb-1.5">
+              Staff Notes / Remarks
             </label>
             <textarea
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Received at front counter..."
-              className="w-full p-2.5 text-xs rounded-lg bg-[#161616] border border-[#333] text-white focus:border-[#F59E0B]"
+              placeholder="Received at Narsobawadi desk..."
+              className="w-full p-3 text-xs rounded-lg bg-[#171717] border border-[#292929] text-[#F5F5F5] focus:outline-none focus:border-[#FFC21A] transition-colors"
             />
           </div>
 
@@ -203,10 +222,10 @@ export const RecordPayment: React.FC = () => {
               type="submit"
               variant="primary"
               isLoading={isPending}
-              className="w-full justify-center h-11 text-sm font-semibold"
+              className="w-full justify-center h-12 text-sm font-bold uppercase tracking-wider"
             >
-              <Check className="w-4 h-4 mr-1.5" />
-              <span>Record & Confirm Settlement</span>
+              <Check className="w-4 h-4 mr-2" />
+              <span>Record & Generate Receipt</span>
             </Button>
           </div>
         </form>

@@ -22,7 +22,7 @@ export const Tabs: React.FC<TabsProps> = ({
   className = '',
 }) => {
   return (
-    <div className={clsx('flex items-center gap-1 border-b border-[#2A2A2A] overflow-x-auto pb-px', className)}>
+    <div className={clsx('flex items-center gap-1 border-b border-[#292929] overflow-x-auto pb-px', className)}>
       {tabs.map((tab) => {
         const isActive = tab.id === activeTab;
         return (
@@ -31,19 +31,19 @@ export const Tabs: React.FC<TabsProps> = ({
             type="button"
             onClick={() => onChange(tab.id)}
             className={clsx(
-              'flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-all whitespace-nowrap cursor-pointer',
+              'flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap cursor-pointer select-none',
               isActive
-                ? 'border-[#F59E0B] text-[#F59E0B] bg-[#F59E0B]/5'
-                : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-600'
+                ? 'border-[#FFC21A] text-[#FFC21A]'
+                : 'border-transparent text-[#A5A5A5] hover:text-[#F5F5F5] hover:border-[#383838]'
             )}
           >
-            {tab.icon && <span>{tab.icon}</span>}
+            {tab.icon && <span className="shrink-0">{tab.icon}</span>}
             <span>{tab.label}</span>
             {tab.count !== undefined && (
               <span
                 className={clsx(
-                  'px-1.5 py-0.5 text-[10px] rounded-full font-bold',
-                  isActive ? 'bg-[#F59E0B] text-black' : 'bg-[#222222] text-gray-400'
+                  'px-1.5 py-0.5 text-[10px] rounded-full font-bold tabular-nums',
+                  isActive ? 'bg-[#FFC21A] text-[#080808]' : 'bg-[#1C1C1C] text-[#A5A5A5]'
                 )}
               >
                 {tab.count}

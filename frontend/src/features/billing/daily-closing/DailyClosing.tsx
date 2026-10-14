@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CalendarCheck, Plus } from 'lucide-react';
+import { CalendarCheck, Plus, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import {
   useDailyClosings,
   useCloseDay,
@@ -62,14 +62,15 @@ export const DailyClosingView: React.FC = () => {
       key: 'closingDate',
       header: 'Closing Date',
       render: (c: DailyClosing) => (
-        <span className="font-semibold text-white text-xs">{formatDate(c.closingDate)}</span>
+        <span className="font-semibold text-[#F5F5F5] text-xs">{formatDate(c.closingDate)}</span>
       ),
     },
     {
       key: 'totalCollectionsPaisa',
       header: 'Total Collections',
+      align: 'right',
       render: (c: DailyClosing) => (
-        <span className="font-bold text-emerald-400 text-xs">
+        <span className="font-mono font-bold tabular-nums text-emerald-400 text-xs">
           {formatCurrency(c.totalCollectionsPaisa)}
         </span>
       ),
@@ -77,27 +78,30 @@ export const DailyClosingView: React.FC = () => {
     {
       key: 'cashCollectionsPaisa',
       header: 'Cash Drawer',
+      align: 'right',
       render: (c: DailyClosing) => (
-        <span className="text-gray-300 text-xs">{formatCurrency(c.cashCollectionsPaisa)}</span>
+        <span className="font-mono tabular-nums text-[#D4D4D4] text-xs">{formatCurrency(c.cashCollectionsPaisa)}</span>
       ),
     },
     {
       key: 'digitalCollectionsPaisa',
       header: 'Digital (UPI/Card)',
+      align: 'right',
       render: (c: DailyClosing) => (
-        <span className="text-gray-300 text-xs">{formatCurrency(c.digitalCollectionsPaisa)}</span>
+        <span className="font-mono tabular-nums text-[#D4D4D4] text-xs">{formatCurrency(c.digitalCollectionsPaisa)}</span>
       ),
     },
     {
       key: 'discrepancyPaisa',
-      header: 'Variance',
+      header: 'Closing Variance',
+      align: 'right',
       render: (c: DailyClosing) => {
         const disc = Number(c.discrepancyPaisa || 0);
         if (disc === 0) {
-          return <span className="text-emerald-400 font-bold text-xs">₹0.00</span>;
+          return <span className="font-mono font-bold text-emerald-400 text-xs">₹0.00</span>;
         }
         return (
-          <span className="text-rose-400 font-bold text-xs">
+          <span className="font-mono font-bold text-rose-400 text-xs">
             {disc > 0 ? `+${formatCurrency(disc)}` : formatCurrency(disc)}
           </span>
         );
@@ -120,22 +124,24 @@ export const DailyClosingView: React.FC = () => {
     },
     {
       key: 'closedAt',
-      header: 'Closed Timestamp',
+      header: 'Timestamp',
       render: (c: DailyClosing) => (
-        <span className="text-gray-400 text-xs">
-          {c.closedAt ? formatDate(c.closedAt) : 'Pending'}
+        <span className="text-[#A5A5A5] text-xs font-mono">
+          {c.closedAt ? formatDate(c.closedAt) : 'In Progress'}
         </span>
       ),
     },
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-12">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-bold text-white tracking-tight">Daily Collection Closing</h2>
-          <p className="text-xs text-gray-400">
-            End-of-day register balancing and cash reconciliation for RV Fitness
+          <h1 className="text-xl font-black text-[#F5F5F5] tracking-tight uppercase">
+            Daily Collection Closing
+          </h1>
+          <p className="text-xs text-[#A5A5A5] mt-0.5">
+            End-of-day register balancing and cash hand-over audit for RV Fitness
           </p>
         </div>
 
@@ -145,32 +151,34 @@ export const DailyClosingView: React.FC = () => {
         </Button>
       </div>
 
-      <Card className="p-6 border-[#262626] bg-[#141414]">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="p-6 rounded-xl bg-[#111111] border border-[#292929]">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <span className="text-xs text-[#F59E0B] font-semibold uppercase tracking-wider block">
-              Today's Current Ledger Status
+            <span className="text-[10px] text-[#FFC21A] font-bold uppercase tracking-wider block">
+              Today's Live Counter Total
             </span>
-            <h3 className="text-2xl font-black text-white mt-1">
+            <h3 className="text-3xl font-black font-mono tabular-nums text-[#F5F5F5] mt-1">
               {formatCurrency(todaySummary?.totalCollectionsPaisa || 0)}
             </h3>
-            <p className="text-xs text-gray-400 mt-1">
-              Cash: {formatCurrency(todaySummary?.cashCollectionsPaisa || 0)} • Digital: {formatCurrency(todaySummary?.digitalCollectionsPaisa || 0)}
+            <p className="text-xs font-mono text-[#A5A5A5] mt-1.5">
+              Cash Drawer: <span className="text-[#F5F5F5]">{formatCurrency(todaySummary?.cashCollectionsPaisa || 0)}</span>
+              {' • '}
+              Digital (UPI/Card): <span className="text-[#F5F5F5]">{formatCurrency(todaySummary?.digitalCollectionsPaisa || 0)}</span>
             </p>
           </div>
 
-          <div className="flex items-center gap-6 text-xs text-gray-300">
-            <div>
-              <span className="text-gray-500 block">Invoices Issued Today</span>
-              <span className="font-bold text-white text-base">{todaySummary?.invoicesIssued || 0}</span>
+          <div className="flex items-center gap-8 text-xs">
+            <div className="p-3.5 rounded-lg bg-[#171717] border border-[#292929] text-center min-w-28">
+              <span className="text-[10px] text-[#A5A5A5] uppercase font-bold block mb-1">Invoices Issued</span>
+              <span className="font-black text-[#F5F5F5] text-xl font-mono">{todaySummary?.invoicesIssued || 0}</span>
             </div>
-            <div>
-              <span className="text-gray-500 block">Invoices Paid</span>
-              <span className="font-bold text-emerald-400 text-base">{todaySummary?.invoicesPaid || 0}</span>
+            <div className="p-3.5 rounded-lg bg-[#171717] border border-[#292929] text-center min-w-28">
+              <span className="text-[10px] text-[#A5A5A5] uppercase font-bold block mb-1">Invoices Settled</span>
+              <span className="font-black text-emerald-400 text-xl font-mono">{todaySummary?.invoicesPaid || 0}</span>
             </div>
           </div>
         </div>
-      </Card>
+      </div>
 
       <Table
         columns={columns}
@@ -182,28 +190,29 @@ export const DailyClosingView: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Close Register for Today"
+        title="Execute Shift / Daily Register Closing"
       >
         <form onSubmit={handleExecuteClosing} className="space-y-4">
           {error && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400">
-              {error}
+            <div className="p-3.5 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-400 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
-          <div className="p-3 rounded-lg bg-[#161616] border border-[#222] text-xs space-y-1">
-            <span className="font-bold text-gray-400 uppercase tracking-wider block mb-1">
-              Recorded System Collections
+          <div className="p-3.5 rounded-lg bg-[#171717] border border-[#292929] text-xs space-y-2">
+            <span className="font-bold text-[10px] text-[#A5A5A5] uppercase tracking-wider block">
+              System Ledger Counts for Today
             </span>
             <div className="flex justify-between">
-              <span className="text-gray-400">System Cash:</span>
-              <span className="font-semibold text-white">
+              <span className="text-[#A5A5A5]">Expected Physical Cash:</span>
+              <span className="font-mono font-bold text-[#F5F5F5]">
                 {formatCurrency(todaySummary?.cashCollectionsPaisa || 0)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">System Digital (UPI/Card):</span>
-              <span className="font-semibold text-white">
+              <span className="text-[#A5A5A5]">Expected Digital Credits:</span>
+              <span className="font-mono font-bold text-[#F5F5F5]">
                 {formatCurrency(todaySummary?.digitalCollectionsPaisa || 0)}
               </span>
             </div>
@@ -228,15 +237,15 @@ export const DailyClosingView: React.FC = () => {
           />
 
           <div>
-            <label className="block text-xs font-medium text-gray-300 mb-1">
+            <label className="block text-xs font-bold text-[#F5F5F5] uppercase tracking-wider mb-1.5">
               Shift Closing Remarks
             </label>
             <textarea
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Evening shift hand-over complete, cash drawer locked"
-              className="w-full p-2.5 text-xs rounded-lg bg-[#161616] border border-[#333] text-white focus:border-[#F59E0B]"
+              placeholder="e.g. Closing handover complete, verified with night cashier..."
+              className="w-full p-2.5 text-xs rounded-lg bg-[#171717] border border-[#292929] text-[#F5F5F5] focus:outline-none focus:border-[#FFC21A]"
             />
           </div>
 

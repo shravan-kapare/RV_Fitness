@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { History, Shield, Filter, Search } from 'lucide-react';
+import { History, Shield, Filter, Search, Terminal } from 'lucide-react';
 import { useAuditLogs } from '@/hooks/useAudit';
 import { Card } from '@/components/ui/Card';
 import { Table, Column } from '@/components/ui/Table';
@@ -27,28 +27,28 @@ export const AuditHistory: React.FC = () => {
       key: 'createdAt',
       header: 'Timestamp',
       render: (log) => (
-        <span className="text-gray-300 text-xs font-mono">{formatDateTime(log.createdAt)}</span>
+        <span className="text-[#A5A5A5] text-xs font-mono">{formatDateTime(log.createdAt)}</span>
       ),
     },
     {
       key: 'user',
-      header: 'Operator',
+      header: 'Staff / Operator',
       render: (log) => (
         <div>
-          <span className="text-white font-medium text-xs">
-            {log.user?.fullName || 'System Event'}
+          <span className="text-[#F5F5F5] font-semibold text-xs">
+            {log.user?.fullName || 'System Automated'}
           </span>
-          <p className="text-[10px] text-gray-500">{log.user?.role || 'SYSTEM'}</p>
+          <p className="text-[10px] font-mono text-[#737373]">{log.user?.role || 'SYSTEM'}</p>
         </div>
       ),
     },
     {
       key: 'action',
-      header: 'Action Executed',
+      header: 'Operation',
       render: (log) => (
         <span
           className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-            log.action.includes('CONFIRM') || log.action.includes('CREATE')
+            log.action.includes('CONFIRM') || log.action.includes('CREATE') || log.action.includes('ISSUE')
               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
               : log.action.includes('REVERSE') || log.action.includes('CANCEL') || log.action.includes('REJECT')
               ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
@@ -63,18 +63,18 @@ export const AuditHistory: React.FC = () => {
       key: 'entityType',
       header: 'Target Entity',
       render: (log) => (
-        <span className="text-gray-300 text-xs">
-          {log.entityType} ({log.entityId ? log.entityId.slice(0, 8) + '...' : 'Global'})
+        <span className="text-[#D4D4D4] text-xs font-mono">
+          {log.entityType} <span className="text-[#737373]">({log.entityId ? log.entityId.slice(0, 8) + '...' : 'Global'})</span>
         </span>
       ),
     },
     {
       key: 'details',
-      header: 'Audit Snapshot',
+      header: 'Payload Details',
       render: (log) => {
         return (
-          <div className="max-w-md truncate text-[11px] text-gray-400 font-mono">
-            {log.newValues ? JSON.stringify(log.newValues) : 'Record created / altered'}
+          <div className="max-w-md truncate text-[11px] text-[#A5A5A5] font-mono" title={log.newValues ? JSON.stringify(log.newValues) : ''}>
+            {log.newValues ? JSON.stringify(log.newValues) : 'Record mutated / created'}
           </div>
         );
       },
@@ -82,29 +82,34 @@ export const AuditHistory: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in pb-12">
       <div>
-        <h2 className="text-xl font-bold text-white tracking-tight">Immutable Audit Trail</h2>
-        <p className="text-xs text-gray-400">
-          Cryptographically referenced event log tracking all financial operations and administrative mutations
+        <h1 className="text-xl font-black text-[#F5F5F5] tracking-tight uppercase">
+          Immutable Audit Trail
+        </h1>
+        <p className="text-xs text-[#A5A5A5] mt-0.5">
+          Tamper-evident ledger log tracking all financial transactions, status mutations, and admin overrides
         </p>
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center gap-4 bg-[#111111] p-3 rounded-xl border border-[#262626]">
+      <div className="flex flex-wrap items-center gap-4 bg-[#111111] p-3 rounded-xl border border-[#292929]">
         <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-400">Filter Domain:</label>
+          <label className="text-xs font-bold uppercase tracking-wider text-[10px] text-[#A5A5A5]">
+            Filter Scope:
+          </label>
           <select
             value={entityType}
             onChange={(e) => {
               setEntityType(e.target.value);
               setPage(1);
             }}
-            className="h-8 px-2.5 rounded bg-[#161616] border border-[#333] text-xs text-white"
+            className="h-8 px-2.5 rounded bg-[#171717] border border-[#292929] text-xs text-[#F5F5F5] focus:outline-none focus:border-[#FFC21A]"
           >
             <option value="ALL">All Entities</option>
             <option value="INVOICE">Invoices</option>
             <option value="PAYMENT">Payments</option>
+            <option value="RECEIPT">Receipts</option>
             <option value="REFUND">Refunds</option>
             <option value="RECONCILIATION">Reconciliation</option>
             <option value="DAILY_CLOSING">Daily Closing</option>
@@ -117,7 +122,7 @@ export const AuditHistory: React.FC = () => {
         columns={columns}
         data={logs}
         isLoading={isLoading}
-        emptyMessage="No audit logs recorded for this criteria."
+        emptyMessage="No audit log entries recorded for this filter."
       />
 
       {totalPages > 1 && (

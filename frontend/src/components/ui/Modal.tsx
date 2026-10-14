@@ -53,7 +53,7 @@ export const Modal: React.FC<ModalProps> = ({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-black/85 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
@@ -61,34 +61,34 @@ export const Modal: React.FC<ModalProps> = ({
       <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
         <div
           className={clsx(
-            'relative transform overflow-hidden rounded-xl bg-[#121212] border border-[#333333] text-left shadow-2xl transition-all sm:my-8 w-full animate-fade-in',
+            'relative transform overflow-hidden rounded-xl bg-[#111111] border border-[#292929] text-left shadow-2xl transition-all sm:my-8 w-full animate-fade-in',
             maxWidths[actualWidth]
           )}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           {(title || description) && (
-            <div className="flex items-start justify-between p-5 border-b border-[#222222]">
+            <div className="flex items-start justify-between px-6 py-4 border-b border-[#222222]">
               <div>
-                {title && <h3 className="text-lg font-semibold text-white">{title}</h3>}
-                {description && <p className="text-xs text-gray-400 mt-1">{description}</p>}
+                {title && <h3 className="text-base font-bold text-[#F5F5F5]">{title}</h3>}
+                {description && <p className="text-xs text-[#A5A5A5] mt-0.5">{description}</p>}
               </div>
               <button
                 type="button"
                 onClick={onClose}
-                className="text-gray-400 hover:text-white rounded-lg p-1 hover:bg-[#222222] transition-colors"
+                className="text-[#737373] hover:text-[#F5F5F5] rounded-lg p-1 hover:bg-[#1E1E1E] transition-colors cursor-pointer"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           )}
 
           {/* Content */}
-          <div className="p-6">{children}</div>
+          <div className="p-6 text-[#F5F5F5]">{children}</div>
 
           {/* Footer */}
           {footer && (
-            <div className="flex items-center justify-end gap-3 px-6 py-4 bg-[#161616] border-t border-[#222222]">
+            <div className="flex items-center justify-end gap-3 px-6 py-3.5 bg-[#0D0D0D] border-t border-[#222222]">
               {footer}
             </div>
           )}

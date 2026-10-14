@@ -27,23 +27,23 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0A0A0A] disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer';
+      'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#080808] disabled:opacity-40 disabled:cursor-not-allowed select-none cursor-pointer';
 
     const variants = {
       primary:
-        'bg-[#F59E0B] text-black font-semibold hover:bg-[#FBBF24] active:bg-[#D97706] focus:ring-[#F59E0B] shadow-sm shadow-[#F59E0B]/20',
+        'bg-[#FFC21A] text-[#080808] font-semibold hover:bg-[#E6AC12] active:bg-[#D49D0E] focus:ring-[#FFC21A] shadow-sm',
       secondary:
-        'bg-[#1A1A1A] text-white border border-[#333333] hover:bg-[#222222] hover:border-[#F59E0B]/50 active:bg-[#111111] focus:ring-[#F59E0B]',
+        'bg-[#171717] text-[#F5F5F5] border border-[#292929] hover:bg-[#1E1E1E] hover:border-[#383838] active:bg-[#121212] focus:ring-zinc-600',
       outline:
-        'border border-[#F59E0B] text-[#F59E0B] hover:bg-[#F59E0B]/10 active:bg-[#F59E0B]/20 focus:ring-[#F59E0B]',
+        'border border-[#FFC21A]/80 text-[#FFC21A] hover:bg-[#FFC21A]/10 active:bg-[#FFC21A]/20 focus:ring-[#FFC21A]',
       danger:
-        'bg-red-600/90 text-white hover:bg-red-500 active:bg-red-700 focus:ring-red-500 shadow-sm shadow-red-600/20',
+        'bg-rose-600/90 text-white hover:bg-rose-500 active:bg-rose-700 focus:ring-rose-500 shadow-sm',
       ghost:
-        'text-gray-300 hover:text-white hover:bg-[#222222] focus:ring-gray-600',
+        'text-[#A5A5A5] hover:text-[#F5F5F5] hover:bg-[#171717] focus:ring-zinc-700',
     };
 
     const sizes = {
-      sm: 'text-xs px-2.5 py-1.5 gap-1.5',
+      sm: 'text-xs px-3 py-1.5 gap-1.5',
       md: 'text-sm px-4 py-2 gap-2',
       lg: 'text-base px-5 py-2.5 gap-2.5',
     };
@@ -61,7 +61,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ) : (
           leftIcon && <span className="shrink-0">{leftIcon}</span>
         )}
-        <span>{children}</span>
+        {children}
         {!isLoading && rightIcon && <span className="shrink-0">{rightIcon}</span>}
       </button>
     );
