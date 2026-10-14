@@ -1,0 +1,533 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// Enums
+// ==========================================
+
+enum UserRole {
+  ADMIN
+  MEMBER
+  TRAINER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum MembershipStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  FROZEN
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+  VOID
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  BANK_TRANSFER
+  CARD
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  REVERSED
+}
+
+enum RefundStatus {
+  REQUESTED
+  APPROVED
+  PROCESSED
+  REJECTED
+}
+
+enum RefundMethod {
+  CASH
+  UPI
+  BANK_TRANSFER
+  CARD
+  ORIGINAL_METHOD
+  OTHER
+}
+
+enum AdjustmentType {
+  CREDIT
+  DEBIT
+  WRITE_OFF
+  CORRECTION
+}
+
+enum ReconciliationStatus {
+  PENDING
+  MATCHED
+  DISCREPANCY
+  RESOLVED
+}
+
+enum ClosingStatus {
+  OPEN
+  CLOSED
+  VERIFIED
+}
+
+// ==========================================
+// 1. Users
+// ==========================================
+
+model User {
+  id           String    @id @default(uuid()) @db.VarChar(36)
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  fullName     String    @map("full_name") @db.VarChar(255)
+  phone        String?   @db.VarChar(20)
+  role         UserRole  @default(MEMBER)
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  memberProfile         Member?
+  createdInvoices       Invoice[]                 @relation("InvoiceCreatedBy")
+  recordedPayments      Payment[]                 @relation("PaymentRecordedBy")
+  issuedReceipts        Receipt[]                 @relation("ReceiptIssuedBy")
+  requestedRefunds      Refund[]                  @relation("RefundRequestedBy")
+  processedRefunds      Refund[]                  @relation("RefundProcessedBy")
+  performedAdjustments  FinancialAdjustment[]     @relation("AdjustmentPerformedBy")
+  auditLogs             AuditLog[]
+  reconciliations       ReconciliationRecord[]    @relation("ReconciliationPerformedBy")
+  dailyClosings         DailyCollectionClosing[]  @relation("ClosingClosedBy")
+  updatedSettings       GymSetting[]              @relation("SettingUpdatedBy")
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+// ==========================================
+// 2. Members (Shared profile interface)
+// ==========================================
+
+model Member {
+  id               String    @id @default(uuid()) @db.VarChar(36)
+  userId           String    @unique @map("user_id") @db.VarChar(36)
+  memberCode       String    @unique @map("member_code") @db.VarChar(20)
+  dateOfBirth      DateTime? @map("date_of_birth") @db.Date
+  gender           Gender?
+  address          String?   @db.Text
+  emergencyContact String?   @map("emergency_contact") @db.VarChar(20)
+  joinDate         DateTime  @default(now()) @map("join_date") @db.Date
+  photoUrl         String?   @map("photo_url") @db.VarChar(500)
+  notes            String?   @db.Text
+  isActive         Boolean   @default(true) @map("is_active")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  memberships  Membership[]
+  invoices     Invoice[]
+  payments     Payment[]
+  receipts     Receipt[]
+  refunds      Refund[]
+
+  @@index([userId])
+  @@index([memberCode])
+  @@index([isActive])
+  @@map("members")
+}
+
+// ==========================================
+// 3. Membership Plans (Shared interface)
+// ==========================================
+
+model MembershipPlan {
+  id           String       @id @default(uuid()) @db.VarChar(36)
+  name         String       @db.VarChar(100)
+  description  String?      @db.Text
+  durationDays Int          @map("duration_days")
+  pricePaisa   BigInt       @map("price_paisa")
+  taxRateBps   Int          @default(0) @map("tax_rate_bps")
+  isActive     Boolean      @default(true) @map("is_active")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  memberships  Membership[]
+
+  @@index([isActive])
+  @@map("membership_plans")
+}
+
+// ==========================================
+// 4. Memberships (Shared interface)
+// ==========================================
+
+model Membership {
+  id        String           @id @default(uuid()) @db.VarChar(36)
+  memberId  String           @map("member_id") @db.VarChar(36)
+  planId    String           @map("plan_id") @db.VarChar(36)
+  startDate DateTime         @map("start_date") @db.Date
+  endDate   DateTime         @map("end_date") @db.Date
+  status    MembershipStatus @default(ACTIVE)
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  member       Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  plan         MembershipPlan @relation(fields: [planId], references: [id])
+  invoiceItems InvoiceItem[]
+
+  @@index([memberId])
+  @@index([status])
+  @@index([endDate])
+  @@map("memberships")
+}
+
+// ==========================================
+// 5. Invoices
+// ==========================================
+
+model Invoice {
+  id             String        @id @default(uuid()) @db.VarChar(36)
+  invoiceNumber  String        @unique @map("invoice_number") @db.VarChar(30)
+  memberId       String        @map("member_id") @db.VarChar(36)
+  status         InvoiceStatus @default(DRAFT)
+  subtotalPaisa  BigInt        @map("subtotal_paisa")
+  taxPaisa       BigInt        @default(0) @map("tax_paisa")
+  discountPaisa  BigInt        @default(0) @map("discount_paisa")
+  totalPaisa     BigInt        @map("total_paisa")
+  paidPaisa      BigInt        @default(0) @map("paid_paisa")
+  dueDate        DateTime      @map("due_date") @db.Date
+  issuedAt       DateTime?     @map("issued_at")
+  notes          String?       @db.Text
+  internalNotes  String?       @map("internal_notes") @db.Text
+  createdBy      String        @map("created_by") @db.VarChar(36)
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  member         Member                @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  creator        User                  @relation("InvoiceCreatedBy", fields: [createdBy], references: [id])
+  items          InvoiceItem[]
+  payments       Payment[]
+  allocations    PaymentAllocation[]
+  receipts       Receipt[]
+  refunds        Refund[]
+  adjustments    FinancialAdjustment[]
+
+  @@index([invoiceNumber])
+  @@index([memberId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([createdAt])
+  @@map("invoices")
+}
+
+// ==========================================
+// 6. Invoice Items (Price snapshotted)
+// ==========================================
+
+model InvoiceItem {
+  id             String      @id @default(uuid()) @db.VarChar(36)
+  invoiceId      String      @map("invoice_id") @db.VarChar(36)
+  membershipId   String?     @map("membership_id") @db.VarChar(36)
+  description    String      @db.VarChar(255)
+  quantity       Int         @default(1)
+  unitPricePaisa BigInt      @map("unit_price_paisa")
+  taxRateBps     Int         @default(0) @map("tax_rate_bps")
+  taxPaisa       BigInt      @default(0) @map("tax_paisa")
+  discountPaisa  BigInt      @default(0) @map("discount_paisa")
+  totalPaisa     BigInt      @map("total_paisa")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  invoice    Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  membership Membership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+// ==========================================
+// 7. Payments
+// ==========================================
+
+model Payment {
+  id              String        @id @default(uuid()) @db.VarChar(36)
+  paymentNumber   String        @unique @map("payment_number") @db.VarChar(30)
+  invoiceId       String        @map("invoice_id") @db.VarChar(36)
+  memberId        String        @map("member_id") @db.VarChar(36)
+  amountPaisa     BigInt        @map("amount_paisa")
+  method          PaymentMethod
+  status          PaymentStatus @default(PENDING)
+  referenceNumber String?       @map("reference_number") @db.VarChar(100)
+  idempotencyKey  String?       @unique @map("idempotency_key") @db.VarChar(100)
+  paymentDate     DateTime      @map("payment_date") @db.Date
+  notes           String?       @db.Text
+  recordedBy      String        @map("recorded_by") @db.VarChar(36)
+  confirmedAt     DateTime?     @map("confirmed_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  invoice     Invoice             @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  member      Member              @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  recorder    User                @relation("PaymentRecordedBy", fields: [recordedBy], references: [id])
+  allocations PaymentAllocation[]
+  receipt     Receipt?
+  refunds     Refund[]
+
+  @@index([paymentNumber])
+  @@index([invoiceId])
+  @@index([memberId])
+  @@index([status])
+  @@index([method])
+  @@index([referenceNumber])
+  @@index([paymentDate])
+  @@map("payments")
+}
+
+// ==========================================
+// 8. Payment Allocations
+// ==========================================
+
+model PaymentAllocation {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  paymentId   String   @map("payment_id") @db.VarChar(36)
+  invoiceId   String   @map("invoice_id") @db.VarChar(36)
+  amountPaisa BigInt   @map("amount_paisa")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([paymentId, invoiceId])
+  @@index([paymentId])
+  @@index([invoiceId])
+  @@map("payment_allocations")
+}
+
+// ==========================================
+// 9. Receipts
+// ==========================================
+
+model Receipt {
+  id            String   @id @default(uuid()) @db.VarChar(36)
+  receiptNumber String   @unique @map("receipt_number") @db.VarChar(30)
+  paymentId     String   @unique @map("payment_id") @db.VarChar(36)
+  invoiceId     String   @map("invoice_id") @db.VarChar(36)
+  memberId      String   @map("member_id") @db.VarChar(36)
+  amountPaisa   BigInt   @map("amount_paisa")
+  issuedAt      DateTime @default(now()) @map("issued_at")
+  issuedBy      String   @map("issued_by") @db.VarChar(36)
+  pdfPath       String?  @map("pdf_path") @db.VarChar(500)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  member  Member  @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  issuer  User    @relation("ReceiptIssuedBy", fields: [issuedBy], references: [id])
+
+  @@index([receiptNumber])
+  @@index([paymentId])
+  @@index([memberId])
+  @@index([issuedAt])
+  @@map("receipts")
+}
+
+// ==========================================
+// 10. Refunds
+// ==========================================
+
+model Refund {
+  id              String       @id @default(uuid()) @db.VarChar(36)
+  refundNumber    String       @unique @map("refund_number") @db.VarChar(30)
+  paymentId       String       @map("payment_id") @db.VarChar(36)
+  invoiceId       String       @map("invoice_id") @db.VarChar(36)
+  memberId        String       @map("member_id") @db.VarChar(36)
+  amountPaisa     BigInt       @map("amount_paisa")
+  reason          String       @db.Text
+  status          RefundStatus @default(REQUESTED)
+  method          RefundMethod
+  referenceNumber String?      @map("reference_number") @db.VarChar(100)
+  requestedBy     String       @map("requested_by") @db.VarChar(36)
+  processedBy     String?      @map("processed_by") @db.VarChar(36)
+  processedAt     DateTime?    @map("processed_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  member    Member  @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  requester User    @relation("RefundRequestedBy", fields: [requestedBy], references: [id])
+  processor User?   @relation("RefundProcessedBy", fields: [processedBy], references: [id])
+
+  @@index([refundNumber])
+  @@index([paymentId])
+  @@index([invoiceId])
+  @@index([memberId])
+  @@index([status])
+  @@map("refunds")
+}
+
+// ==========================================
+// 11. Financial Adjustments
+// ==========================================
+
+model FinancialAdjustment {
+  id               String         @id @default(uuid()) @db.VarChar(36)
+  adjustmentNumber String         @unique @map("adjustment_number") @db.VarChar(30)
+  invoiceId        String         @map("invoice_id") @db.VarChar(36)
+  type             AdjustmentType
+  amountPaisa      BigInt         @map("amount_paisa")
+  reason           String         @db.Text
+  performedBy      String         @map("performed_by") @db.VarChar(36)
+  createdAt        DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  performer User    @relation("AdjustmentPerformedBy", fields: [performedBy], references: [id])
+
+  @@index([adjustmentNumber])
+  @@index([invoiceId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("financial_adjustments")
+}
+
+// ==========================================
+// 12. Audit Logs
+// ==========================================
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  userId     String   @map("user_id") @db.VarChar(36)
+  action     String   @db.VarChar(100)
+  entityType String   @map("entity_type") @db.VarChar(50)
+  entityId   String   @map("entity_id") @db.VarChar(36)
+  oldValues  Json?    @map("old_values")
+  newValues  Json?    @map("new_values")
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  userAgent  String?  @map("user_agent") @db.VarChar(500)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ==========================================
+// 13. Reconciliation Records
+// ==========================================
+
+model ReconciliationRecord {
+  id                   String               @id @default(uuid()) @db.VarChar(36)
+  reconciliationDate   DateTime             @map("reconciliation_date") @db.Date
+  periodStart          DateTime             @map("period_start")
+  periodEnd            DateTime             @map("period_end")
+  recordedCashPaisa    BigInt               @default(0) @map("recorded_cash_paisa")
+  recordedUpiPaisa     BigInt               @default(0) @map("recorded_upi_paisa")
+  recordedCardPaisa    BigInt               @default(0) @map("recorded_card_paisa")
+  recordedBankPaisa    BigInt               @default(0) @map("recorded_bank_paisa")
+  recordedOtherPaisa   BigInt               @default(0) @map("recorded_other_paisa")
+  recordedTotalPaisa   BigInt               @map("recorded_total_paisa")
+  declaredCashPaisa    BigInt?              @map("declared_cash_paisa")
+  declaredDigitalPaisa BigInt?              @map("declared_digital_paisa")
+  declaredTotalPaisa   BigInt?              @map("declared_total_paisa")
+  discrepancyPaisa     BigInt?              @map("discrepancy_paisa")
+  status               ReconciliationStatus @default(PENDING)
+  notes                String?              @db.Text
+  performedBy          String               @map("performed_by") @db.VarChar(36)
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  // Relations
+  performer     User                     @relation("ReconciliationPerformedBy", fields: [performedBy], references: [id])
+  dailyClosings DailyCollectionClosing[]
+
+  @@index([reconciliationDate])
+  @@index([status])
+  @@map("reconciliation_records")
+}
+
+// ==========================================
+// 14. Daily Collection Closings
+// ==========================================
+
+model DailyCollectionClosing {
+  id                      String        @id @default(uuid()) @db.VarChar(36)
+  closingDate             DateTime      @unique @map("closing_date") @db.Date
+  reconciliationId        String?       @map("reconciliation_id") @db.VarChar(36)
+  totalCollectionsPaisa   BigInt        @map("total_collections_paisa")
+  cashCollectionsPaisa    BigInt        @default(0) @map("cash_collections_paisa")
+  digitalCollectionsPaisa BigInt        @default(0) @map("digital_collections_paisa")
+  invoicesIssued          Int           @default(0) @map("invoices_issued")
+  invoicesPaid            Int           @default(0) @map("invoices_paid")
+  refundsProcessedPaisa   BigInt        @default(0) @map("refunds_processed_paisa")
+  declaredCashPaisa       BigInt?       @map("declared_cash_paisa")
+  declaredDigitalPaisa    BigInt?       @map("declared_digital_paisa")
+  discrepancyPaisa        BigInt?       @map("discrepancy_paisa")
+  status                  ClosingStatus @default(OPEN)
+  closedBy                String?       @map("closed_by") @db.VarChar(36)
+  closedAt                DateTime?     @map("closed_at")
+  notes                   String?       @db.Text
+  createdAt               DateTime      @default(now()) @map("created_at")
+  updatedAt               DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  reconciliation ReconciliationRecord? @relation(fields: [reconciliationId], references: [id], onDelete: SetNull)
+  closer         User?                 @relation("ClosingClosedBy", fields: [closedBy], references: [id])
+
+  @@index([closingDate])
+  @@index([status])
+  @@map("daily_collection_closings")
+}
+
+// ==========================================
+// 15. Gym Settings
+// ==========================================
+
+model GymSetting {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  key         String   @unique @db.VarChar(100)
+  value       String   @db.Text
+  description String?  @db.VarChar(255)
+  updatedBy   String?  @map("updated_by") @db.VarChar(36)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  updater User? @relation("SettingUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@map("gym_settings")
+}
