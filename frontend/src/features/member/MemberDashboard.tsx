@@ -27,9 +27,11 @@ import {
   AlertTriangle,
   Clock,
   ChevronRight,
-  ShieldAlert,
-  HeartPulse,
+  ShieldCheck,
+  Scale,
+  Award,
 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 import clsx from 'clsx';
 
 export const MemberDashboard: React.FC = () => {
@@ -56,7 +58,7 @@ export const MemberDashboard: React.FC = () => {
   const today = todaySession?.today;
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto pb-16">
       {/* Onboarding Wizard Modal */}
       <OnboardingWizard
         isOpen={isOnboardingOpen}
@@ -66,291 +68,221 @@ export const MemberDashboard: React.FC = () => {
 
       {/* Onboarding Alert Banner if incomplete */}
       {!isOnboardingLoading && onboardingStatus && !onboardingStatus.completed && (
-        <div className="bg-gradient-to-r from-[#FFC21A]/20 via-[#1F1905] to-[#141414] border border-[#FFC21A]/50 p-6 rounded-3xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-          <div className="flex items-start space-x-4">
-            <div className="w-12 h-12 rounded-2xl bg-[#FFC21A] text-black flex items-center justify-center shrink-0 shadow-md">
-              <Sparkles className="w-6 h-6 stroke-[2.5]" />
+        <div className="bg-gradient-to-r from-[#FFC21A]/20 via-[#1F1905] to-[#141418] border border-[#FFC21A]/40 p-5 sm:p-6 rounded-2xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-start space-x-3.5">
+            <div className="w-10 h-10 rounded-xl bg-[#FFC21A] text-black flex items-center justify-center shrink-0 shadow-md">
+              <Sparkles className="w-5 h-5 stroke-[2.5]" />
             </div>
             <div>
-              <span className="text-[11px] font-mono uppercase tracking-wider text-[#FFC21A] font-bold">
-                Induction Action Required
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#FFC21A] font-bold">
+                Action Recommended
               </span>
-              <h3 className="text-xl font-black text-[#F5F5F5] uppercase tracking-wide mt-0.5">
-                Complete Your First-Login Biometric Induction
+              <h3 className="text-base sm:text-lg font-black text-white uppercase tracking-tight mt-0.5">
+                Complete Your Biometric Induction
               </h3>
-              <p className="text-xs text-[#C5C5C5] mt-1 max-w-2xl leading-relaxed">
-                Personalize your day-of-week workout engine, calibrate health goals, and record baseline BMI and measurements to unlock real-time equipment optimization in Narsobawadi.
+              <p className="text-xs text-[#A5A5A5] mt-0.5 max-w-xl leading-relaxed">
+                Personalize your 7-day workout split, calibrate target calories, and calculate baseline BMI for coach tracking.
               </p>
             </div>
           </div>
 
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             onClick={() => setIsOnboardingOpen(true)}
-            className="px-6 py-3 rounded-xl bg-[#FFC21A] text-black font-extrabold text-xs uppercase tracking-wider hover:bg-[#e5ad16] transition shrink-0 shadow-lg shadow-[#FFC21A]/20 flex items-center space-x-2 cursor-pointer"
+            className="font-bold text-xs uppercase tracking-wider shrink-0"
           >
-            <span>Start Induction Wizard</span>
-            <ChevronRight className="w-4 h-4 stroke-[3]" />
-          </button>
+            <span>Start Induction</span>
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
         </div>
       )}
 
-      {/* Welcome Banner */}
-      <div className="bg-[#111111] p-6 sm:p-8 rounded-3xl border border-[#292929] flex flex-col md:flex-row md:items-center justify-between gap-6">
+      {/* Top Welcome Header */}
+      <div className="bg-[#141418] p-5 sm:p-6 rounded-2xl border border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
         <div>
-          <span className="text-xs font-bold text-[#FFC21A] uppercase tracking-wider">
-            Member Sanctuary
-          </span>
-          <h1 className="text-3xl font-black text-[#F5F5F5] uppercase mt-1">
+          <div className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-[#1A1A22] border border-white/10 text-[11px] font-mono font-bold text-[#FFC21A] mb-1.5">
+            <Dumbbell className="w-3 h-3" />
+            <span>ATHLETE DASHBOARD & TRAINING DESK</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
             Welcome Back, {user?.fullName}
           </h1>
-          <p className="text-sm text-[#A5A5A5] mt-1">
-            Track your workout splits, nutrition macros, and scan your digital pass at the turnstile.
+          <p className="text-xs text-[#A5A5A5] mt-0.5">
+            Narsobawadi Center • Track your daily workout split, nutrition macros, and scan your digital pass.
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
-          <button
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => setIsOnboardingOpen(true)}
-            className="px-4 py-3 rounded-xl bg-[#1A1A1A] border border-[#333333] text-[#F5F5F5] font-bold text-xs hover:border-[#FFC21A] transition cursor-pointer"
+            className="text-xs font-semibold"
           >
-            {onboardingStatus?.completed ? 'Update Biometrics' : 'Induction Profile'}
-          </button>
-          <Link
-            to="/member/qr"
-            className="inline-flex items-center space-x-2 px-5 py-3 rounded-xl bg-[#FFC21A] text-black font-extrabold text-sm shadow-md shadow-[#FFC21A]/10 hover:bg-[#e5ad16] transition"
-          >
-            <QrCode className="w-4 h-4 stroke-[2.5]" />
-            <span>Open QR Pass</span>
+            <span>{onboardingStatus?.completed ? 'Update Biometrics' : 'Induction Profile'}</span>
+          </Button>
+
+          <Link to="/member/qr">
+            <Button variant="primary" size="sm" className="font-bold text-xs uppercase tracking-wider">
+              <QrCode className="w-3.5 h-3.5 mr-1.5" />
+              <span>Digital QR Pass</span>
+            </Button>
           </Link>
         </div>
       </div>
 
-      {/* Notifications Alert Bar */}
+      {/* Notification Announcement Bar (if any) */}
       {unreadNotifications.length > 0 && (
-        <div className="bg-[#171717] p-4 rounded-2xl border border-[#FFC21A]/30 flex items-center justify-between">
-          <div className="flex items-center space-x-3 text-xs sm:text-sm text-[#F5F5F5]">
-            <Bell className="w-5 h-5 text-[#FFC21A] shrink-0" />
+        <div className="bg-[#141418] p-4 rounded-2xl border border-[#FFC21A]/30 flex items-center justify-between shadow-md">
+          <div className="flex items-center space-x-3 text-xs sm:text-sm text-white">
+            <Bell className="w-4 h-4 text-[#FFC21A] shrink-0" />
             <span>
               <strong>Announcement:</strong> {unreadNotifications[0].title} — {unreadNotifications[0].message}
             </span>
           </div>
-          <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-[#FFC21A]/20 text-[#FFC21A]">
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#FFC21A]/20 text-[#FFC21A] font-bold">
             NEW
           </span>
         </div>
       )}
 
-      {/* Core Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Attendance Check-Ins */}
-        <div className="bg-[#111111] p-6 rounded-2xl border border-[#292929]">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-[#888888] uppercase">Monthly Check-Ins</span>
-            <Calendar className="w-5 h-5 text-[#FFC21A]" />
+      {/* 4 Core Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Attendance Check-ins */}
+        <div className="bg-[#141418] p-4 sm:p-5 rounded-2xl border border-white/10 flex flex-col justify-between shadow-md">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase text-[#A1A1AA]">
+            <span>Monthly Check-Ins</span>
+            <Calendar className="w-4 h-4 text-[#FFC21A]" />
           </div>
-          <p className="text-3xl font-black font-mono tabular-nums text-[#F5F5F5]">
-            {attendanceHistory.length}
-          </p>
-          <p className="text-xs text-[#888888] mt-1">Total recorded turnstile visits</p>
-        </div>
-
-        {/* Active Plan & Expiry Countdown */}
-        <div className="bg-[#111111] p-6 rounded-2xl border border-[#292929]">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-[#888888] uppercase">Active Membership</span>
-            <Dumbbell className="w-5 h-5 text-[#FFC21A]" />
-          </div>
-          <p className="text-xl font-black text-[#F5F5F5] truncate">
-            {activeMembership?.plan?.name || 'Yearly Elite Athlete'}
-          </p>
-          <div className="flex items-center space-x-1.5 mt-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[11px] font-mono text-emerald-400 font-semibold">
-              {membershipDaysRemaining !== null
-                ? `${membershipDaysRemaining} days remaining`
-                : 'Active Status'}
-            </span>
+          <div className="mt-2.5">
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-white tabular-nums">
+              {attendanceHistory.length}
+            </div>
+            <p className="text-[11px] text-[#71717A] mt-0.5 font-mono">Turnstile admissions</p>
           </div>
         </div>
 
-        {/* Real Biometrics & BMI */}
-        <div className="bg-[#111111] p-6 rounded-2xl border border-[#292929]">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-[#888888] uppercase">Current Biometrics</span>
-            <Activity className="w-5 h-5 text-[#FFC21A]" />
+        {/* Active Membership Status */}
+        <div className="bg-[#141418] p-4 sm:p-5 rounded-2xl border border-white/10 flex flex-col justify-between shadow-md">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase text-[#A1A1AA]">
+            <span>Active Plan</span>
+            <Award className="w-4 h-4 text-emerald-400" />
           </div>
-          <p className="text-3xl font-black font-mono tabular-nums text-[#F5F5F5]">
-            {latestAssessment ? `${Number(latestAssessment.weightKg).toFixed(1)} kg` : '78.5 kg'}
-          </p>
-          <div className="flex items-center space-x-2 text-xs text-[#888888] mt-1 font-mono">
-            <span>BMI: <strong className="text-white">{latestAssessment ? Number(latestAssessment.bmi).toFixed(1) : '24.8'}</strong></span>
-            {latestAssessment?.bodyFatPct && (
-              <span>• BF: <strong className="text-white">{Number(latestAssessment.bodyFatPct).toFixed(1)}%</strong></span>
-            )}
+          <div className="mt-2.5">
+            <div className="text-base sm:text-lg font-bold text-white truncate">
+              {activeMembership?.plan?.name || 'Yearly Elite Athlete'}
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span className="text-[11px] font-mono text-emerald-400 font-semibold">
+                {membershipDaysRemaining !== null ? `${membershipDaysRemaining} days remaining` : 'Active'}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Daily Caloric Target */}
-        <div className="bg-[#111111] p-6 rounded-2xl border border-[#292929]">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-[#888888] uppercase">Daily Target</span>
-            <Apple className="w-5 h-5 text-[#FFC21A]" />
+        {/* Current Body Weight */}
+        <div className="bg-[#141418] p-4 sm:p-5 rounded-2xl border border-white/10 flex flex-col justify-between shadow-md">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase text-[#A1A1AA]">
+            <span>Current Weight</span>
+            <Scale className="w-4 h-4 text-[#FFC21A]" />
           </div>
-          <p className="text-3xl font-black font-mono tabular-nums text-[#FFC21A]">
-            {diet ? `${diet.dailyCalories} kcal` : '2,400 kcal'}
-          </p>
-          <p className="text-xs text-[#888888] mt-1">
-            {diet ? `${diet.proteinGrams}g Protein` : '160g Protein Target'}
-          </p>
+          <div className="mt-2.5">
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-white tabular-nums">
+              {latestAssessment ? `${Number(latestAssessment.weightKg).toFixed(1)} kg` : '74.5 kg'}
+            </div>
+            <p className="text-[11px] text-[#71717A] mt-0.5 font-mono">
+              BMI: {latestAssessment ? Number(latestAssessment.bmi).toFixed(1) : '22.8'}
+            </p>
+          </div>
+        </div>
+
+        {/* Target Daily Energy */}
+        <div className="bg-[#141418] p-4 sm:p-5 rounded-2xl border border-white/10 flex flex-col justify-between shadow-md">
+          <div className="flex items-center justify-between text-[11px] font-mono font-bold uppercase text-[#A1A1AA]">
+            <span>Daily Macro Target</span>
+            <Apple className="w-4 h-4 text-[#FFC21A]" />
+          </div>
+          <div className="mt-2.5">
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-[#FFC21A] tabular-nums">
+              {diet?.dailyCalories || 2400}{' '}
+              <span className="text-xs text-[#A1A1AA] font-normal">kcal</span>
+            </div>
+            <p className="text-[11px] text-[#71717A] mt-0.5 font-mono">
+              Protein: {diet?.proteinGrams || 160}g
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Main Split: QR Pass + Assigned Regimes */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Left Column: Digital ID Turnstile Pass */}
-        <div className="lg:col-span-1">
-          <DigitalIdCard />
+      {/* Main Focus: Today's Workout & Digital Pass */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Today's Workout Routine (7 cols) */}
+        <div className="lg:col-span-7 bg-[#141418] p-6 rounded-2xl border border-white/10 space-y-4 shadow-xl">
+          <div className="flex items-center justify-between pb-3 border-b border-white/10">
+            <div>
+              <div className="flex items-center space-x-2">
+                <Dumbbell className="w-4 h-4 text-[#FFC21A]" />
+                <h2 className="text-base font-bold text-white uppercase tracking-tight">
+                  Today's Training Session
+                </h2>
+              </div>
+              <p className="text-xs text-[#A1A1AA] mt-0.5">
+                {today?.isRestDay
+                  ? 'Scheduled Recovery & Mobility'
+                  : today?.dayTitle || 'Assigned Workout Split'}
+              </p>
+            </div>
+            <Link
+              to="/member/workouts"
+              className="text-xs text-[#FFC21A] hover:underline flex items-center gap-1 font-bold uppercase tracking-wider"
+            >
+              <span>Full 7-Day Split</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {today?.isRestDay ? (
+            <div className="p-8 text-center bg-[#101014] rounded-xl border border-white/5 space-y-2">
+              <Flame className="w-10 h-10 text-amber-400 mx-auto opacity-75" />
+              <h3 className="font-bold text-white uppercase text-sm">Active Recovery Day</h3>
+              <p className="text-xs text-[#A1A1AA] max-w-sm mx-auto">
+                No heavy lifting scheduled today. Focus on hydration, 20 minutes of light mobility or foam rolling, and adequate sleep.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {(today?.exercises || [
+                { exerciseName: 'Barbell Bench Press', sets: 4, reps: '8-10', restSeconds: 90 },
+                { exerciseName: 'Incline Dumbbell Press', sets: 3, reps: '10-12', restSeconds: 60 },
+                { exerciseName: 'Cable Crossover Flyes', sets: 3, reps: '15', restSeconds: 60 },
+                { exerciseName: 'Triceps Rope Pushdown', sets: 4, reps: '12', restSeconds: 45 },
+              ]).map((ex: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3.5 rounded-xl bg-[#101014] border border-white/5"
+                >
+                  <div className="flex items-center space-x-3">
+                    <span className="w-6 h-6 rounded-lg bg-[#1C1C24] text-xs font-mono font-bold text-[#FFC21A] flex items-center justify-center">
+                      {idx + 1}
+                    </span>
+                    <span className="font-bold text-xs text-white">{ex.exerciseName}</span>
+                  </div>
+                  <div className="text-right font-mono text-xs">
+                    <span className="text-[#FFC21A] font-bold">{ex.sets} sets</span>
+                    <span className="text-[#71717A]"> × </span>
+                    <span className="text-white">{ex.reps} reps</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Right Column: Today's Assigned Session & Live Equipment Substitution */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Today's Personalized Workout Session */}
-          <div className="bg-[#111111] p-6 sm:p-8 rounded-3xl border border-[#292929]">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-6 border-b border-[#222222] gap-3">
-              <div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#FFC21A]/20 text-[#FFC21A] font-bold">
-                    TODAY IN ASIA/KOLKATA
-                  </span>
-                  <span className="text-xs text-[#888888] font-mono">
-                    {today ? `${today.weekday}, Day ${today.dayNumber}` : 'Day Schedule'}
-                  </span>
-                </div>
-                <h3 className="text-xl font-black text-[#F5F5F5] uppercase mt-1">
-                  {today ? today.dayTitle : 'Push A — Hypertrophy & Chest Power'}
-                </h3>
-              </div>
-              <Link
-                to="/member/workouts"
-                className="text-xs font-bold text-[#FFC21A] hover:underline flex items-center space-x-1 shrink-0"
-              >
-                <span>Inspect 7-Day Split</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            {/* If Today is Rest Day */}
-            {today?.restDay ? (
-              <div className="bg-[#171717] p-6 rounded-2xl border border-blue-500/20 text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center mx-auto">
-                  <HeartPulse className="w-6 h-6 stroke-[2]" />
-                </div>
-                <h4 className="text-base font-bold text-white">Active Sanctuary Rest & Muscle Repair</h4>
-                <p className="text-xs text-[#A5A5A5] max-w-md mx-auto leading-relaxed">
-                  Your body repairs and builds muscle fibers during scheduled recovery days. Prioritize 3-4 liters of water, 8 hours of sleep, and gentle joint mobility.
-                </p>
-              </div>
-            ) : today?.exercises && today.exercises.length > 0 ? (
-              <div className="space-y-3">
-                {today.exercises.map((ex: any) => (
-                  <div
-                    key={ex.id || ex.orderIndex}
-                    className={clsx(
-                      'p-4 rounded-2xl border transition',
-                      ex.isSubstituted
-                        ? 'bg-[#1C1710] border-[#FFC21A]/40'
-                        : 'bg-[#171717] border-[#292929]'
-                    )}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="flex items-start space-x-3">
-                        <span className="w-6 h-6 rounded-lg bg-[#222222] text-[#888888] font-mono text-xs flex items-center justify-center shrink-0">
-                          {ex.orderIndex}
-                        </span>
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <h4 className="text-sm font-bold text-[#F5F5F5]">{ex.exerciseName}</h4>
-                            {ex.targetMuscle && (
-                              <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-white/5 text-[#888888]">
-                                {ex.targetMuscle}
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-xs text-[#888888] block mt-0.5">
-                            Station: <span className="text-[#C5C5C5] font-medium">{ex.requiredEquipment}</span>
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center space-x-3 text-xs font-mono self-end sm:self-auto">
-                        <span className="text-[#FFC21A] font-bold bg-[#FFC21A]/10 px-2.5 py-1 rounded-lg border border-[#FFC21A]/20">
-                          {ex.sets} sets × {ex.reps}
-                        </span>
-                        <span className="text-[#737373]">
-                          {ex.restSeconds || 90}s rest
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Substitution Warning Callout */}
-                    {ex.substitutionNotice && (
-                      <div className="mt-2.5 pt-2 border-t border-[#FFC21A]/20 flex items-center space-x-2 text-[11px] text-[#FFC21A]">
-                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                        <span>{ex.substitutionNotice}</span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-8 text-center text-xs text-[#888]">
-                <p>Personalized workout split is active on your profile.</p>
-                <Link to="/member/workouts" className="text-[#FFC21A] font-bold mt-2 inline-block">
-                  Inspect Workout Details →
-                </Link>
-              </div>
-            )}
-          </div>
-
-          {/* Nutrition Split Card */}
-          <div className="bg-[#111111] p-6 sm:p-8 rounded-3xl border border-[#292929]">
-            <div className="flex items-center justify-between pb-4 mb-6 border-b border-[#222222]">
-              <div>
-                <span className="text-xs font-bold text-[#FFC21A] uppercase">Nutrition Plan</span>
-                <h3 className="text-xl font-bold text-[#F5F5F5]">
-                  {diet ? diet.title : 'Clean Lean Mass Gain (2,400 kcal)'}
-                </h3>
-              </div>
-              <Link
-                to="/member/diets"
-                className="text-xs font-bold text-[#FFC21A] hover:underline flex items-center space-x-1"
-              >
-                <span>View Meal Schedule</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="bg-[#171717] p-4 rounded-xl border border-[#292929]">
-                <span className="text-[10px] text-[#888] uppercase">Protein</span>
-                <p className="text-xl font-mono font-bold text-[#F5F5F5] mt-1">
-                  {diet ? `${diet.proteinGrams}g` : '160g'}
-                </p>
-              </div>
-              <div className="bg-[#171717] p-4 rounded-xl border border-[#292929]">
-                <span className="text-[10px] text-[#888] uppercase">Carbohydrates</span>
-                <p className="text-xl font-mono font-bold text-[#F5F5F5] mt-1">
-                  {diet ? `${diet.carbsGrams}g` : '260g'}
-                </p>
-              </div>
-              <div className="bg-[#171717] p-4 rounded-xl border border-[#292929]">
-                <span className="text-[10px] text-[#888] uppercase">Healthy Fats</span>
-                <p className="text-xl font-mono font-bold text-[#F5F5F5] mt-1">
-                  {diet ? `${diet.fatsGrams}g` : '65g'}
-                </p>
-              </div>
-            </div>
-          </div>
+        {/* Right Column: Digital Turnstile Pass Card (5 cols) */}
+        <div className="lg:col-span-5">
+          <DigitalIdCard />
         </div>
       </div>
     </div>

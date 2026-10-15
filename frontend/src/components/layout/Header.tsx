@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore';
 
 const pageTitles: Record<string, { title: string; subtitle: string; category?: string }> = {
   '/dashboard': { title: 'Billing & Operations Dashboard', subtitle: 'Real-time financial status, collections, and receivables', category: 'ADMIN' },
+  '/admin/members': { title: 'Members Directory', subtitle: 'Manage athlete rosters, personal details, and profiles', category: 'OPERATIONS' },
   '/admin/attendance': { title: 'Turnstile Access Control', subtitle: 'Live verified member check-ins & RFID desk operations', category: 'OPERATIONS' },
   '/admin/memberships': { title: 'Subscriptions & Renewals', subtitle: 'Active member packages, renewal cycles, and freeze controls', category: 'MEMBERSHIPS' },
   '/admin/plans': { title: 'Membership Plans & Benefits', subtitle: 'Manage plan pricing, durations, and bundled facility privileges', category: 'CONFIGURATION' },

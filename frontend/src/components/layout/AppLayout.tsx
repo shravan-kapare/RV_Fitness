@@ -22,7 +22,7 @@ export const AppLayout: React.FC = () => {
       <div
         className={clsx(
           'flex-1 flex flex-col min-h-screen transition-all duration-200',
-          isCollapsed ? 'lg:pl-16' : 'lg:pl-60'
+          isCollapsed ? 'lg:pl-16' : 'lg:pl-64'
         )}
       >
         <Header onToggleMobile={() => setIsMobileOpen(true)} />

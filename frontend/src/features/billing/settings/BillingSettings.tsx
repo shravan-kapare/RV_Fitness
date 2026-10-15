@@ -14,17 +14,17 @@ export const BillingSettings: React.FC = () => {
   const [formState, setFormState] = useState<Record<string, string>>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const settings: GymSetting[] = Array.isArray(settingRes)
-    ? settingRes
-    : (settingRes as any)?.data || [];
-
   React.useEffect(() => {
-    if (settings && settings.length > 0) {
-      const initial: Record<string, string> = {};
-      settings.forEach((s: GymSetting) => {
-        initial[s.key] = s.value;
-      });
-      setFormState(initial);
+    if (settingRes) {
+      if (Array.isArray(settingRes)) {
+        const initial: Record<string, string> = {};
+        settingRes.forEach((s: any) => {
+          if (s?.key) initial[s.key] = s.value;
+        });
+        setFormState(initial);
+      } else if (typeof settingRes === 'object') {
+        setFormState(settingRes);
+      }
     }
   }, [settingRes]);
 

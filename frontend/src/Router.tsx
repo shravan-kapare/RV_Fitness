@@ -29,6 +29,7 @@ import { MyProgress } from '@/features/member/MyProgress';
 import { TrainerDashboard } from '@/features/trainer/TrainerDashboard';
 
 // Admin Operations Views
+import { MembersManager } from '@/features/admin/MembersManager';
 import { AttendanceDesk } from '@/features/admin/AttendanceDesk';
 import { MembershipsRenewals } from '@/features/admin/MembershipsRenewals';
 import { PlansBenefitsManager } from '@/features/admin/PlansBenefitsManager';
@@ -98,6 +99,7 @@ export const AppRouter: React.FC = () => {
           {/* Admin Operations & Business Management */}
           <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
             <Route path="/dashboard" element={<BillingDashboard />} />
+            <Route path="/admin/members" element={<MembersManager />} />
             <Route path="/admin/memberships" element={<MembershipsRenewals />} />
             <Route path="/admin/plans" element={<PlansBenefitsManager />} />
             <Route path="/admin/trainers" element={<TrainersManager />} />

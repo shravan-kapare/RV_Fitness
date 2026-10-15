@@ -28,6 +28,15 @@ export const HomePage: React.FC = () => {
   const trainers = data?.trainers || [];
   const events = data?.events || [];
   const gallery = data?.gallery || [];
+  const settings = data?.settings || {};
+
+  const heroHeadlineLine1 = settings.hero_headline_line1 || 'YOUR';
+  const heroHeadlineAccent = settings.hero_headline_accent || 'STRENGTH.';
+  const heroHeadlineLine2 = settings.hero_headline_line2 || 'YOUR JOURNEY.';
+  const heroTagline = settings.hero_tagline || 'Train with purpose, work with expert guidance, and make progress at RV Fitness, Narsobawadi.';
+  const heroBgImage = settings.hero_bg_image || 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2000&auto=format&fit=crop';
+  const heroCtaPrimary = settings.hero_cta_primary || 'Explore Memberships';
+  const heroCtaSecondary = settings.hero_cta_secondary || 'Discover Our Gym';
 
   // Parallax scroll state for cinematic background
   const [scrollY, setScrollY] = useState(0);
@@ -106,7 +115,7 @@ export const HomePage: React.FC = () => {
         <div
           className="absolute inset-0 w-full h-[120%] -top-[10%] bg-cover bg-center transition-transform duration-75 will-change-transform"
           style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2000&auto=format&fit=crop')`,
+            backgroundImage: `url('${heroBgImage}')`,
             transform: prefersReducedMotion ? 'none' : `translate3d(0, ${Math.min(scrollY * 0.16, 120)}px, 0)`,
           }}
           aria-hidden="true"
@@ -130,13 +139,13 @@ export const HomePage: React.FC = () => {
 
               {/* Headline: Clean, Confident, Not Oversized */}
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-6xl xl:text-7xl font-black tracking-tight text-white uppercase leading-[1.02]">
-                YOUR <span className="text-[#FFC21A]">STRENGTH</span>. <br />
-                YOUR JOURNEY.
+                {heroHeadlineLine1} <span className="text-[#FFC21A]">{heroHeadlineAccent}</span> <br />
+                {heroHeadlineLine2}
               </h1>
 
               {/* Supporting Copy */}
               <p className="text-base sm:text-lg text-[#CCCCCC] max-w-xl leading-relaxed font-normal">
-                Train with purpose, work with expert guidance, and make progress at RV Fitness, Narsobawadi.
+                {heroTagline}
               </p>
 
               {/* Action Buttons */}
@@ -145,14 +154,14 @@ export const HomePage: React.FC = () => {
                   to="/memberships"
                   className="inline-flex items-center justify-center space-x-2 px-7 py-3.5 rounded-xl bg-[#FFC21A] hover:bg-[#e5ad16] text-black font-extrabold text-sm sm:text-base shadow-lg shadow-[#FFC21A]/20 transition transform hover:-translate-y-0.5"
                 >
-                  <span>Explore Memberships</span>
+                  <span>{heroCtaPrimary}</span>
                   <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                 </Link>
                 <a
                   href="#about-intro"
                   className="inline-flex items-center justify-center space-x-2 px-7 py-3.5 rounded-xl bg-[#171717]/85 hover:bg-[#242424] border border-white/15 text-[#F5F5F5] font-semibold text-sm sm:text-base transition backdrop-blur-md"
                 >
-                  <span>Discover Our Gym</span>
+                  <span>{heroCtaSecondary}</span>
                   <ChevronRight className="w-4 h-4 text-[#FFC21A]" />
                 </a>
               </div>
