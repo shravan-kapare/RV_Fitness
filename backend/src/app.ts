@@ -23,6 +23,15 @@ import { dailyClosingRoutes } from './modules/billing/daily-closing/closing.rout
 import { reportRoutes } from './modules/billing/reports/report.routes';
 import { auditRoutes } from './modules/billing/audit/audit.routes';
 import { settingsRoutes } from './modules/billing/settings/settings.routes';
+import trainerRoutes from './modules/trainers/trainer.routes';
+import benefitRoutes from './modules/benefits/benefit.routes';
+import membershipRoutes from './modules/memberships/membership.routes';
+import attendanceRoutes from './modules/attendance/attendance.routes';
+import fitnessRoutes from './modules/fitness/fitness.routes';
+import expenseRoutes from './modules/expenses/expense.routes';
+import cmsRoutes from './modules/cms/cms.routes';
+import notificationRoutes from './modules/notifications/notification.routes';
+import publicRoutes from './modules/public/public.routes';
 import { prisma } from './config/database';
 
 // Enable BigInt serialization across all JSON responses
@@ -60,7 +69,7 @@ const healthHandler = async (_req: Request, res: Response) => {
     await prisma.$queryRaw`SELECT 1`;
     res.status(200).json({
       status: 'ok',
-      service: 'RV Fitness Billing API',
+      service: 'RV Fitness Platform API',
       timestamp: new Date().toISOString(),
       database: 'connected',
       environment: env.NODE_ENV,
@@ -68,7 +77,7 @@ const healthHandler = async (_req: Request, res: Response) => {
   } catch (error: any) {
     res.status(503).json({
       status: 'error',
-      service: 'RV Fitness Billing API',
+      service: 'RV Fitness Platform API',
       timestamp: new Date().toISOString(),
       database: 'disconnected',
       error: error.message,
@@ -80,10 +89,19 @@ app.get('/health', healthHandler);
 app.get('/api/v1/health', healthHandler);
 
 // Mount feature module API routes
+app.use('/api/v1/public', publicRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/members', memberRoutes);
 app.use('/api/v1/membership-plans', planRoutes);
+app.use('/api/v1/benefits', benefitRoutes);
+app.use('/api/v1/memberships', membershipRoutes);
+app.use('/api/v1/trainers', trainerRoutes);
+app.use('/api/v1/attendance', attendanceRoutes);
+app.use('/api/v1/fitness', fitnessRoutes);
+app.use('/api/v1/expenses', expenseRoutes);
+app.use('/api/v1/cms', cmsRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/invoices', invoiceRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/receipts', receiptRoutes);

@@ -56,7 +56,52 @@ body {
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.2s ease-out;
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Fluid Responsive Typography */
+.display-hero {
+  font-size: clamp(2.25rem, 1rem + 4.5vw, 5.25rem);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+
+.heading-section {
+  font-size: clamp(1.75rem, 0.85rem + 2.8vw, 3.25rem);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+}
+
+/* Glassmorphism & High-End Card Surfaces */
+.glass-surface {
+  background: rgba(255, 255, 255, 0.025);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.glass-surface-hover {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-surface-hover:hover {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 194, 26, 0.3);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 36px -12px rgba(0, 0, 0, 0.75), 0 0 20px 0 rgba(255, 194, 26, 0.05);
+}
+
+/* Reduced Motion Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-spin, .animate-pulse, .animate-bounce, .animate-fade-in {
+    animation: none !important;
+  }
 }
 
 /* Print Specific Rules for Invoices & Receipts */

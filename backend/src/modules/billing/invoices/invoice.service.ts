@@ -147,6 +147,10 @@ export class InvoiceService {
 
     if (!invoice) throw new NotFoundError('Invoice not found');
 
+    if (user && user.role === UserRole.TRAINER) {
+      throw new ForbiddenError('Trainers do not have access to billing operations');
+    }
+
     // Ownership check: Members can only view their own invoices
     if (user && user.role === UserRole.MEMBER && invoice.member.userId !== user.id) {
       throw new ForbiddenError('You can only view your own invoices');
@@ -171,6 +175,10 @@ export class InvoiceService {
     },
     user?: { id: string; role: UserRole }
   ) {
+    if (user && user.role === UserRole.TRAINER) {
+      throw new ForbiddenError('Trainers do not have access to billing operations');
+    }
+
     const page = Math.max(1, filters.page || 1);
     const limit = Math.min(100, Math.max(1, filters.limit || 20));
     const skip = (page - 1) * limit;

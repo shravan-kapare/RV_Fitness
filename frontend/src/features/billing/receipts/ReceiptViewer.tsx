@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Download, Printer, CheckCircle2, FileText, ArrowUpRight, Eye } from 'lucide-react';
-import { useReceipts } from '@/hooks/useReceipts';
+import { useReceipts, downloadReceiptPdf } from '@/hooks/useReceipts';
 import { Button } from '@/components/ui/Button';
 import { Table, Column } from '@/components/ui/Table';
 import { Pagination } from '@/components/ui/Pagination';
@@ -9,6 +9,7 @@ import { SearchInput } from '@/components/ui/SearchInput';
 import { Modal } from '@/components/ui/Modal';
 import { formatCurrency, formatDate, formatPaymentMethod } from '@/lib/formatters';
 import { Receipt } from '@/types';
+import toast from 'react-hot-toast';
 
 export const ReceiptViewer: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -17,6 +18,7 @@ export const ReceiptViewer: React.FC = () => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const { data: response, isLoading } = useReceipts({
     page,
@@ -27,8 +29,17 @@ export const ReceiptViewer: React.FC = () => {
   const receipts = response?.data || [];
   const totalPages = response?.pagination?.totalPages || 1;
 
-  const handleDownloadPdf = (receiptId: string) => {
-    window.open(`/api/v1/receipts/${receiptId}/pdf`, '_blank');
+  const handleDownloadPdf = async (receiptId: string, receiptNumber: string) => {
+    try {
+      setDownloadingId(receiptId);
+      await downloadReceiptPdf(receiptId, receiptNumber);
+      toast.success(`Receipt ${receiptNumber} downloaded successfully`);
+    } catch (error: any) {
+      console.error('Failed to download receipt PDF:', error);
+      toast.error(error.response?.data?.message || 'Failed to download receipt PDF');
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   const handlePrint = () => {
@@ -97,7 +108,8 @@ export const ReceiptViewer: React.FC = () => {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => handleDownloadPdf(r.id)}
+            onClick={() => handleDownloadPdf(r.id, r.receiptNumber)}
+            isLoading={downloadingId === r.id}
             className="text-xs px-2.5 py-1 h-auto"
           >
             <Download className="w-3.5 h-3.5 mr-1 text-[#FFC21A]" />
@@ -237,7 +249,8 @@ export const ReceiptViewer: React.FC = () => {
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={() => handleDownloadPdf(selectedReceipt.id)}
+                  onClick={() => handleDownloadPdf(selectedReceipt.id, selectedReceipt.receiptNumber)}
+                  isLoading={downloadingId === selectedReceipt.id}
                   className="flex-1 sm:flex-initial"
                 >
                   <Download className="w-3.5 h-3.5 mr-1" />

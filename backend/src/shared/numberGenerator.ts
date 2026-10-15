@@ -133,3 +133,26 @@ export async function generateMemberCode(): Promise<string> {
 
   return `${prefix}${String(nextSequence).padStart(4, '0')}`;
 }
+
+export async function generateExpenseNumber(): Promise<string> {
+  const year = new Date().getFullYear();
+  const prefix = `EXP-${year}-`;
+
+  const lastExpense = await prisma.expense.findFirst({
+    where: { expenseNumber: { startsWith: prefix } },
+    orderBy: { expenseNumber: 'desc' },
+    select: { expenseNumber: true },
+  });
+
+  let nextSequence = 1;
+  if (lastExpense) {
+    const parts = lastExpense.expenseNumber.split('-');
+    const seq = parseInt(parts[parts.length - 1], 10);
+    if (!isNaN(seq)) {
+      nextSequence = seq + 1;
+    }
+  }
+
+  return `${prefix}${String(nextSequence).padStart(4, '0')}`;
+}
+

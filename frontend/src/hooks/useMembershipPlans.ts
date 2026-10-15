@@ -2,13 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { MembershipPlan, ApiResponse } from '@/types';
 
-export const useMembershipPlans = () => {
+export const useMembershipPlans = (params?: { published?: boolean }) => {
   return useQuery({
-    queryKey: ['membership-plans'],
+    queryKey: ['membership-plans', params],
     queryFn: async () => {
-      const { data } = await api.get<ApiResponse<MembershipPlan[]> | { success: boolean; data: MembershipPlan[] }>('/membership-plans', {
-        params: { isActive: true },
-      });
+      const { data } = await api.get<ApiResponse<MembershipPlan[]> | { success: boolean; data: MembershipPlan[] }>(
+        '/membership-plans',
+        { params }
+      );
       return data.data;
     },
   });

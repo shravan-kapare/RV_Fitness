@@ -3,8 +3,41 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 
-// Feature Pages
+// Public Website Views
+import { PublicLayout } from '@/features/public/PublicLayout';
+import { HomePage } from '@/features/public/HomePage';
+import { AboutPage } from '@/features/public/AboutPage';
+import { MembershipsPage } from '@/features/public/MembershipsPage';
+import { FacilitiesPage } from '@/features/public/FacilitiesPage';
+import { TrainersPage } from '@/features/public/TrainersPage';
+import { EventsPage } from '@/features/public/EventsPage';
+import { GalleryPage } from '@/features/public/GalleryPage';
+import { OffersPage } from '@/features/public/OffersPage';
+import { ContactPage } from '@/features/public/ContactPage';
+
+// Auth View
 import { LoginPage } from '@/features/auth/LoginPage';
+
+// Member Portal Views
+import { MemberDashboard } from '@/features/member/MemberDashboard';
+import { DigitalIdCard } from '@/features/member/DigitalIdCard';
+import { MyWorkouts } from '@/features/member/MyWorkouts';
+import { MyDiets } from '@/features/member/MyDiets';
+import { MyProgress } from '@/features/member/MyProgress';
+
+// Trainer Workspace
+import { TrainerDashboard } from '@/features/trainer/TrainerDashboard';
+
+// Admin Operations Views
+import { AttendanceDesk } from '@/features/admin/AttendanceDesk';
+import { MembershipsRenewals } from '@/features/admin/MembershipsRenewals';
+import { PlansBenefitsManager } from '@/features/admin/PlansBenefitsManager';
+import { TrainersManager } from '@/features/admin/TrainersManager';
+import { ExpensesManager } from '@/features/admin/ExpensesManager';
+import { CmsManager } from '@/features/admin/CmsManager';
+import { NotificationsCenter } from '@/features/admin/NotificationsCenter';
+
+// Financial & Billing Management Views
 import { BillingDashboard } from '@/features/billing/dashboard/BillingDashboard';
 import { InvoiceList } from '@/features/billing/invoices/InvoiceList';
 import { CreateInvoice } from '@/features/billing/invoices/CreateInvoice';
@@ -24,43 +57,64 @@ import { BillingSettings } from '@/features/billing/settings/BillingSettings';
 export const AppRouter: React.FC = () => {
   return (
     <Routes>
-      {/* Public Routes */}
+      {/* 1. Public Website Routes */}
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/memberships" element={<MembershipsPage />} />
+        <Route path="/facilities" element={<FacilitiesPage />} />
+        <Route path="/trainers" element={<TrainersPage />} />
+        <Route path="/events" element={<EventsPage />} />
+        <Route path="/gallery" element={<GalleryPage />} />
+        <Route path="/offers" element={<OffersPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+      </Route>
+
+      {/* 2. Authentication */}
       <Route path="/login" element={<LoginPage />} />
 
-      {/* Protected App Routes */}
-      <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'MEMBER']} />}>
+      {/* 3. Authenticated Application Portals */}
+      <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'MEMBER', 'TRAINER']} />}>
         <Route element={<AppLayout />}>
-          {/* Default Redirect */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          {/* Member Self-Service Portal */}
+          <Route element={<ProtectedRoute allowedRoles={['MEMBER']} />}>
+            <Route path="/member" element={<MemberDashboard />} />
+            <Route path="/member/qr" element={<DigitalIdCard />} />
+            <Route path="/member/workouts" element={<MyWorkouts />} />
+            <Route path="/member/diets" element={<MyDiets />} />
+            <Route path="/member/progress" element={<MyProgress />} />
+          </Route>
 
-          {/* Admin Dashboard */}
+          {/* Trainer Workspace */}
+          <Route element={<ProtectedRoute allowedRoles={['TRAINER']} />}>
+            <Route path="/trainer" element={<TrainerDashboard />} />
+          </Route>
+
+          {/* Shared Admin & Trainer Turnstile Desk */}
+          <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'TRAINER']} />}>
+            <Route path="/admin/attendance" element={<AttendanceDesk />} />
+          </Route>
+
+          {/* Admin Operations & Business Management */}
           <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
             <Route path="/dashboard" element={<BillingDashboard />} />
+            <Route path="/admin/memberships" element={<MembershipsRenewals />} />
+            <Route path="/admin/plans" element={<PlansBenefitsManager />} />
+            <Route path="/admin/trainers" element={<TrainersManager />} />
+            <Route path="/admin/expenses" element={<ExpensesManager />} />
+            <Route path="/admin/cms" element={<CmsManager />} />
+            <Route path="/admin/notifications" element={<NotificationsCenter />} />
           </Route>
 
-          {/* Invoices (Admin full, Member view own) */}
-          <Route path="/invoices" element={<InvoiceList />} />
-          <Route path="/invoices/:id" element={<InvoiceDetail />} />
-
-          {/* Admin Only Invoice Creation */}
+          {/* Financial & Billing Management (Admin Only) */}
           <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+            <Route path="/invoices" element={<InvoiceList />} />
+            <Route path="/invoices/:id" element={<InvoiceDetail />} />
             <Route path="/invoices/create" element={<CreateInvoice />} />
-          </Route>
-
-          {/* Payments (Admin full, Member view own) */}
-          <Route path="/payments" element={<PaymentList />} />
-          <Route path="/payments/:id" element={<PaymentDetail />} />
-
-          {/* Admin Only Payment Recording */}
-          <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+            <Route path="/payments" element={<PaymentList />} />
+            <Route path="/payments/:id" element={<PaymentDetail />} />
             <Route path="/payments/record" element={<RecordPayment />} />
-          </Route>
-
-          {/* Receipts (Admin + Member view) */}
-          <Route path="/receipts" element={<ReceiptViewer />} />
-
-          {/* Admin Only Management & Reporting Modules */}
-          <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+            <Route path="/receipts" element={<ReceiptViewer />} />
             <Route path="/outstanding" element={<OutstandingBalances />} />
             <Route path="/refunds" element={<RefundManagement />} />
             <Route path="/reconciliation" element={<PaymentReconciliation />} />
@@ -72,8 +126,8 @@ export const AppRouter: React.FC = () => {
         </Route>
       </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* Fallback Catch-All */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

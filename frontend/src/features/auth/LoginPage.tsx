@@ -23,7 +23,14 @@ export const LoginPage: React.FC = () => {
 
     try {
       await login(email, password);
-      navigate('/dashboard');
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser?.role === 'TRAINER') {
+        navigate('/trainer');
+      } else if (currentUser?.role === 'MEMBER') {
+        navigate('/member');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       const msg = err.response?.data?.error?.message || err.response?.data?.message || err.message || 'Invalid credentials. Please verify your email and password.';
       setError(msg);
@@ -115,22 +122,30 @@ export const LoginPage: React.FC = () => {
               <Shield className="w-3.5 h-3.5 text-[#FFC21A]" />
               <span>Test Credentials (Demo Mode)</span>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="grid grid-cols-3 gap-2 text-xs">
               <button
                 type="button"
                 onClick={() => handleFillDemo('admin@rvfitness.com', 'Admin@123456')}
-                className="p-2.5 rounded-lg bg-[#171717] hover:bg-[#1E1E1E] border border-[#292929] hover:border-[#383838] text-left transition-colors cursor-pointer"
+                className="p-2 rounded-lg bg-[#171717] hover:bg-[#1E1E1E] border border-[#292929] hover:border-[#383838] text-left transition-colors cursor-pointer"
               >
-                <span className="block font-semibold text-[#F5F5F5]">Admin Staff</span>
-                <span className="text-[10px] text-[#737373] truncate block">admin@rvfitness.com</span>
+                <span className="block font-semibold text-[#F5F5F5] text-[11px]">Admin Staff</span>
+                <span className="text-[9px] text-[#737373] truncate block">admin@</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFillDemo('trainer@rvfitness.com', 'Trainer@123456')}
+                className="p-2 rounded-lg bg-[#171717] hover:bg-[#1E1E1E] border border-[#292929] hover:border-[#383838] text-left transition-colors cursor-pointer"
+              >
+                <span className="block font-semibold text-[#F5F5F5] text-[11px]">Trainer</span>
+                <span className="text-[9px] text-[#737373] truncate block">trainer@</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleFillDemo('rohit.shinde@example.com', 'Member@123456')}
-                className="p-2.5 rounded-lg bg-[#171717] hover:bg-[#1E1E1E] border border-[#292929] hover:border-[#383838] text-left transition-colors cursor-pointer"
+                className="p-2 rounded-lg bg-[#171717] hover:bg-[#1E1E1E] border border-[#292929] hover:border-[#383838] text-left transition-colors cursor-pointer"
               >
-                <span className="block font-semibold text-[#F5F5F5]">Gym Member</span>
-                <span className="text-[10px] text-[#737373] truncate block">rohit.shinde@example.com</span>
+                <span className="block font-semibold text-[#F5F5F5] text-[11px]">Member</span>
+                <span className="text-[9px] text-[#737373] truncate block">rohit@</span>
               </button>
             </div>
           </div>

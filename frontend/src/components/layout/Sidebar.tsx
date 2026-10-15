@@ -17,7 +17,16 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  QrCode,
+  Users,
+  Activity,
+  Apple,
+  Globe,
+  Bell,
+  Wallet,
+  DollarSign,
+  Package
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import clsx from 'clsx';
@@ -38,22 +47,46 @@ const navGroups: NavGroup[] = [
   {
     groupTitle: 'OVERVIEW',
     items: [
-      { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN'] },
+      { label: 'Admin Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['ADMIN'] },
+      { label: 'Trainer Command', path: '/trainer', icon: Users, roles: ['TRAINER'] },
+      { label: 'Member Sanctuary', path: '/member', icon: Dumbbell, roles: ['MEMBER'] },
     ],
   },
   {
-    groupTitle: 'BILLING',
+    groupTitle: 'MEMBER SELF-SERVICE',
     items: [
-      { label: 'Invoices', path: '/invoices', icon: FileText, roles: ['ADMIN', 'MEMBER'] },
+      { label: 'Turnstile QR Pass', path: '/member/qr', icon: QrCode, roles: ['MEMBER'] },
+      { label: 'Assigned Workouts', path: '/member/workouts', icon: Dumbbell, roles: ['MEMBER'] },
+      { label: 'Nutrition & Macros', path: '/member/diets', icon: Apple, roles: ['MEMBER'] },
+      { label: 'Biometrics & Progress', path: '/member/progress', icon: Activity, roles: ['MEMBER'] },
+    ],
+  },
+  {
+    groupTitle: 'GYM OPERATIONS',
+    items: [
+      { label: 'Turnstile Desk', path: '/admin/attendance', icon: QrCode, roles: ['ADMIN', 'TRAINER'] },
+      { label: 'Athletes & Coaching', path: '/trainer', icon: Users, roles: ['TRAINER'] },
+      { label: 'Subscriptions & Renewals', path: '/admin/memberships', icon: CalendarCheck, roles: ['ADMIN'] },
+      { label: 'Plans & Benefits', path: '/admin/plans', icon: Package, roles: ['ADMIN'] },
+      { label: 'Trainer Roster & Staff', path: '/admin/trainers', icon: Users, roles: ['ADMIN'] },
+      { label: 'Operational Expenses', path: '/admin/expenses', icon: DollarSign, roles: ['ADMIN'] },
+      { label: 'CMS & Inquiries', path: '/admin/cms', icon: Globe, roles: ['ADMIN'] },
+      { label: 'Broadcast Center', path: '/admin/notifications', icon: Bell, roles: ['ADMIN'] },
+    ],
+  },
+  {
+    groupTitle: 'BILLING & INVOICING',
+    items: [
+      { label: 'Invoices', path: '/invoices', icon: FileText, roles: ['ADMIN'] },
       { label: 'Create Invoice', path: '/invoices/create', icon: PlusCircle, roles: ['ADMIN'] },
-      { label: 'Payments', path: '/payments', icon: CreditCard, roles: ['ADMIN', 'MEMBER'] },
+      { label: 'Payments', path: '/payments', icon: CreditCard, roles: ['ADMIN'] },
       { label: 'Record Payment', path: '/payments/record', icon: PlusCircle, roles: ['ADMIN'] },
-      { label: 'Receipts', path: '/receipts', icon: Receipt, roles: ['ADMIN', 'MEMBER'] },
+      { label: 'Receipts', path: '/receipts', icon: Receipt, roles: ['ADMIN'] },
       { label: 'Outstanding Balances', path: '/outstanding', icon: AlertCircle, roles: ['ADMIN'] },
     ],
   },
   {
-    groupTitle: 'FINANCIAL OPERATIONS',
+    groupTitle: 'FINANCIAL CONTROL',
     items: [
       { label: 'Refund Management', path: '/refunds', icon: RefreshCw, roles: ['ADMIN'] },
       { label: 'Reconciliation', path: '/reconciliation', icon: Scale, roles: ['ADMIN'] },
@@ -63,9 +96,10 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    groupTitle: 'CONFIGURATION',
+    groupTitle: 'SETTINGS & PUBLIC',
     items: [
       { label: 'Billing Settings', path: '/settings', icon: Settings, roles: ['ADMIN'] },
+      { label: 'Public Website', path: '/', icon: Globe, roles: ['ADMIN', 'TRAINER', 'MEMBER'] },
     ],
   },
 ];

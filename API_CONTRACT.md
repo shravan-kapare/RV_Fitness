@@ -1,416 +1,187 @@
-# RV Fitness — API Contract
+# RV FITNESS — Complete REST API Contract
 
-## Base URL
-```
-http://localhost:3000/api/v1
-```
+**Base URL:** `/api/v1`  
+**Data Format:** JSON (`application/json`)  
+**Authentication Scheme:** HTTP Bearer JWT (`Authorization: Bearer <token>`)  
+**Currency Standard:** Minor units in Paisa (Integer BigInt, ₹1.00 = 100 paisa)  
 
-## Authentication
-All protected endpoints require a Bearer token in the Authorization header:
-```
-Authorization: Bearer <access_token>
-```
+---
 
-## Common Response Format
+## 1. Global Conventions & Envelope Format
+
+### Success Response Envelope
 ```json
 {
   "success": true,
-  "data": {},
-  "message": "Operation successful",
+  "data": { ... },
+  "message": "Operation completed successfully"
+}
+```
+
+### Paginated Response Envelope
+```json
+{
+  "success": true,
+  "data": [ ... ],
   "pagination": {
     "page": 1,
-    "limit": 20,
-    "total": 100,
+    "limit": 10,
+    "total": 42,
     "totalPages": 5
   }
 }
 ```
 
-## Error Response Format
+### Standard Error Response Envelope
 ```json
 {
   "success": false,
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "Invalid input",
+    "message": "The submitted payload failed schema validation",
     "details": [
-      { "field": "amount", "message": "Amount must be positive" }
+      {
+        "field": "pricePaisa",
+        "message": "Expected positive integer minor units in paisa"
+      }
     ]
   }
 }
 ```
 
-## Common Query Parameters
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| page | integer | 1 | Page number |
-| limit | integer | 20 | Items per page (max 100) |
-| sort | string | created_at | Sort field |
-| order | string | desc | Sort order (asc/desc) |
-| search | string | - | Search term |
+### Error Code Taxonomy
+- `UNAUTHORIZED` (401): Missing or expired JWT token.
+- `FORBIDDEN` (403): User lacks required role permissions.
+- `NOT_FOUND` (404): Target entity does not exist.
+- `VALIDATION_ERROR` (400): Zod validation failure.
+- `BUSINESS_RULE_ERROR` (422): Violates gym operating constraints (e.g. refunding more than paid).
+- `CONFLICT` (409): Duplicate code or active unexpired record.
+- `INTERNAL_SERVER_ERROR` (500): Unhandled exception.
 
 ---
 
-## Auth Endpoints
-
-### POST /auth/login
-Login and receive tokens.
-- **Body:** `{ email, password }`
-- **Response:** `{ accessToken, refreshToken, user: { id, email, fullName, role } }`
-- **Auth:** Public
-
-### POST /auth/refresh
-Refresh access token.
-- **Body:** `{ refreshToken }`
-- **Response:** `{ accessToken, refreshToken }`
-- **Auth:** Public
-
-### POST /auth/logout
-Invalidate refresh token.
-- **Auth:** Authenticated
-
-### GET /auth/me
-Get current user profile.
-- **Auth:** Authenticated
-
----
-
-## User Management
-
-### POST /users
-Create new user (admin-only for ADMIN/TRAINER roles).
-- **Body:** `{ email, password, fullName, phone, role }`
-- **Auth:** ADMIN
-- **Validation:** role must be ADMIN, MEMBER, or TRAINER
-
-### GET /users
-List users with pagination.
-- **Auth:** ADMIN
-- **Filters:** role, isActive, search
-
-### GET /users/:id
-Get user by ID.
-- **Auth:** ADMIN or self
-
-### PATCH /users/:id
-Update user.
-- **Auth:** ADMIN or self (role change: ADMIN only)
-
----
-
-## Member Management (Integration Interface)
-
-### GET /members
-List members with pagination.
-- **Auth:** ADMIN
-- **Filters:** isActive, search
-
-### GET /members/:id
-Get member details.
-- **Auth:** ADMIN or member-self
-
-### POST /members
-Create member profile.
-- **Body:** `{ userId, memberCode, dateOfBirth?, gender?, address?, emergencyContact?, joinDate? }`
-- **Auth:** ADMIN
-
----
-
-## Membership Plans (Integration Interface)
-
-### GET /membership-plans
-List available plans.
-- **Auth:** Authenticated
-- **Filters:** isActive
-
-### GET /membership-plans/:id
-Get plan details.
-- **Auth:** Authenticated
-
----
-
-## Invoices
-
-### POST /invoices
-Create a new invoice.
-- **Body:**
-```json
-{
-  "memberId": "uuid",
-  "dueDate": "2024-12-31",
-  "items": [
-    {
-      "membershipId": "uuid",
-      "description": "Monthly Basic Plan",
-      "quantity": 1,
-      "unitPricePaisa": 200000,
-      "taxRateBps": 1800,
-      "discountPaisa": 0
-    }
-  ],
-  "notes": "Optional member-visible notes",
-  "internalNotes": "Optional admin-only notes"
-}
-```
-- **Auth:** ADMIN
-- **Response:** Created invoice with computed totals
-
-### GET /invoices
-List invoices with pagination.
-- **Auth:** ADMIN (all), MEMBER (own only)
-- **Filters:** status, memberId, dateFrom, dateTo, overdue, search
-
-### GET /invoices/:id
-Get invoice details with items, payments, and balance.
-- **Auth:** ADMIN or member-owner
-
-### PATCH /invoices/:id
-Update draft invoice.
-- **Auth:** ADMIN
-- **Note:** Only DRAFT invoices can be modified
-
-### POST /invoices/:id/issue
-Issue a draft invoice.
-- **Auth:** ADMIN
-- **State transition:** DRAFT → ISSUED
-
-### POST /invoices/:id/cancel
-Cancel an invoice.
-- **Auth:** ADMIN
-- **State transition:** DRAFT/ISSUED → CANCELLED
-
-### POST /invoices/:id/void
-Void a paid invoice (with adjustment).
-- **Auth:** ADMIN
-- **State transition:** PAID → VOID
-
----
-
-## Payments
-
-### POST /payments
-Record a payment.
-- **Body:**
-```json
-{
-  "invoiceId": "uuid",
-  "amountPaisa": 200000,
-  "method": "CASH",
-  "referenceNumber": "optional-txn-ref",
-  "paymentDate": "2024-12-15",
-  "notes": "Optional notes",
-  "idempotencyKey": "unique-client-key"
-}
-```
-- **Auth:** ADMIN
-- **Validation:** Amount > 0, ≤ remaining balance, valid invoice state
-- **Idempotency:** Duplicate key returns original payment
-
-### GET /payments
-List payments with pagination.
-- **Auth:** ADMIN (all), MEMBER (own only)
-- **Filters:** status, method, invoiceId, memberId, dateFrom, dateTo, search
-
-### GET /payments/:id
-Get payment details.
-- **Auth:** ADMIN or member-owner
-
-### POST /payments/:id/confirm
-Confirm a pending payment.
-- **Auth:** ADMIN
-- **State transition:** PENDING → CONFIRMED
-- **Side effect:** Creates receipt, updates invoice paid amount
-
-### POST /payments/:id/reverse
-Reverse a confirmed payment.
-- **Auth:** ADMIN
-- **State transition:** CONFIRMED → REVERSED
-- **Side effect:** Updates invoice paid amount, voids receipt
-
----
-
-## Receipts
-
-### GET /receipts
-List receipts with pagination.
-- **Auth:** ADMIN (all), MEMBER (own only)
-- **Filters:** memberId, dateFrom, dateTo
-
-### GET /receipts/:id
-Get receipt details.
-- **Auth:** ADMIN or member-owner
-
-### GET /receipts/:id/pdf
-Download receipt as PDF.
-- **Auth:** ADMIN or member-owner
-
----
-
-## Refunds
-
-### POST /refunds
-Request a refund.
-- **Body:**
-```json
-{
-  "paymentId": "uuid",
-  "amountPaisa": 100000,
-  "reason": "Member requested cancellation",
-  "method": "ORIGINAL_METHOD"
-}
-```
-- **Auth:** ADMIN
-- **Validation:** Amount ≤ (original payment - existing refunds)
-
-### GET /refunds
-List refunds with pagination.
-- **Auth:** ADMIN
-- **Filters:** status, memberId, dateFrom, dateTo
-
-### GET /refunds/:id
-Get refund details.
-- **Auth:** ADMIN
-
-### POST /refunds/:id/approve
-Approve a refund request.
-- **Auth:** ADMIN
-- **State transition:** REQUESTED → APPROVED
-
-### POST /refunds/:id/process
-Process an approved refund.
-- **Auth:** ADMIN
-- **State transition:** APPROVED → PROCESSED
-
-### POST /refunds/:id/reject
-Reject a refund request.
-- **Auth:** ADMIN
-- **State transition:** REQUESTED → REJECTED
-
----
-
-## Financial Adjustments
-
-### POST /adjustments
-Create a financial adjustment.
-- **Body:** `{ invoiceId, type, amountPaisa, reason }`
-- **Auth:** ADMIN
-
-### GET /adjustments
-List adjustments.
-- **Auth:** ADMIN
-- **Filters:** invoiceId, type, dateFrom, dateTo
-
----
-
-## Reconciliation
-
-### POST /reconciliation
-Create reconciliation record.
-- **Body:** `{ reconciliationDate, declaredCashPaisa, declaredDigitalPaisa, notes }`
-- **Auth:** ADMIN
-
-### GET /reconciliation
-List reconciliation records.
-- **Auth:** ADMIN
-- **Filters:** status, dateFrom, dateTo
-
-### GET /reconciliation/:id
-Get reconciliation details.
-- **Auth:** ADMIN
-
-### POST /reconciliation/:id/resolve
-Resolve discrepancy.
-- **Auth:** ADMIN
-
----
-
-## Daily Closing
-
-### POST /daily-closings
-Create daily closing.
-- **Body:** `{ closingDate, declaredCashPaisa, declaredDigitalPaisa, notes }`
-- **Auth:** ADMIN
-
-### GET /daily-closings
-List daily closings.
-- **Auth:** ADMIN
-
-### GET /daily-closings/:id
-Get closing details.
-- **Auth:** ADMIN
-
-### POST /daily-closings/:id/close
-Close the day.
-- **Auth:** ADMIN
-
----
-
-## Reports
-
-### GET /reports/summary
-Financial summary (date range).
-- **Auth:** ADMIN
-- **Query:** dateFrom, dateTo
-
-### GET /reports/collections
-Collection totals by method.
-- **Auth:** ADMIN
-
-### GET /reports/outstanding
-Outstanding balance report with aging.
-- **Auth:** ADMIN
-
-### GET /reports/revenue
-Revenue breakdown.
-- **Auth:** ADMIN
-
-### GET /reports/overdue
-Overdue invoice report.
-- **Auth:** ADMIN
-
----
-
-## Audit
-
-### GET /audit-logs
-List audit logs.
-- **Auth:** ADMIN
-- **Filters:** userId, entityType, entityId, action, dateFrom, dateTo
-
----
-
-## Settings
-
-### GET /settings
-Get all billing settings.
-- **Auth:** ADMIN
-
-### PATCH /settings
-Update settings.
-- **Body:** `{ key, value }`
-- **Auth:** ADMIN
-
----
-
-## Health
-
-### GET /health
-Health check (public).
-- **Response:** `{ status: "ok", timestamp, database: "connected" }`
-
----
-
-## Status Codes
-
-| Code | Usage |
-|------|-------|
-| 200 | Successful retrieval or update |
-| 201 | Resource created |
-| 400 | Validation error |
-| 401 | Not authenticated |
-| 403 | Not authorized |
-| 404 | Resource not found |
-| 409 | Conflict (duplicate, state violation) |
-| 422 | Business rule violation |
-| 429 | Rate limited |
-| 500 | Internal server error |
+## 2. API Endpoint Matrix
+
+### 2.1 Authentication & Profile (`/auth`, `/users`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/auth/login` | Public | Authenticates credentials, returns access & refresh tokens |
+| `POST` | `/auth/register` | Public | Registers new member account (strictly `MEMBER` role) |
+| `POST` | `/auth/refresh` | Public | Issues new access token via refresh token |
+| `GET` | `/auth/me` | Authenticated | Returns current authenticated user and linked profile |
+| `POST` | `/auth/logout` | Authenticated | Revokes current session token |
+| `GET` | `/users` | `ADMIN` | Lists staff and member user accounts |
+| `PATCH`| `/users/:id` | `ADMIN` | Updates user details or toggles active status |
+
+### 2.2 Public Website & CMS (`/public`, `/cms`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/public/plans` | Public | Returns published membership plans with ordered benefits |
+| `GET` | `/public/trainers` | Public | Returns published trainer profiles, ratings, and bios |
+| `GET` | `/public/facilities`| Public | Returns gym facility photos and equipment specifications |
+| `GET` | `/public/events` | Public | Lists upcoming gym events and registration links |
+| `GET` | `/public/gallery` | Public | Returns categorized gallery photography |
+| `GET` | `/public/offers` | Public | Returns active promotional discount codes |
+| `POST` | `/public/contact` | Public | Submits a contact inquiry form |
+| `GET` | `/cms/inquiries` | `ADMIN` | Lists all received visitor contact inquiries |
+| `PATCH`| `/cms/inquiries/:id`| `ADMIN` | Updates inquiry status (`NEW` $\rightarrow$ `READ` $\rightarrow$ `RESPONDED`) |
+| `POST` | `/cms/events` | `ADMIN` | Creates a new gym event |
+| `POST` | `/cms/gallery` | `ADMIN` | Adds a gallery item with category and image URL |
+| `POST` | `/cms/offers` | `ADMIN` | Creates or activates a promotional discount coupon |
+
+### 2.3 Membership Plans & Benefits (`/membership-plans`, `/benefits`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/membership-plans`| `ADMIN` | Lists all configured membership plans |
+| `POST` | `/membership-plans`| `ADMIN` | Creates a plan with price, duration, and assigned benefits |
+| `GET` | `/membership-plans/:id`| `ADMIN` | Gets plan details with benefits junction |
+| `PATCH`| `/membership-plans/:id`| `ADMIN` | Updates price, duration, or benefits order |
+| `DELETE`| `/membership-plans/:id`| `ADMIN` | Archives a plan (inactive; preserves historical data) |
+| `GET` | `/benefits` | `ADMIN` | Lists reusable benefit catalog items |
+| `POST` | `/benefits` | `ADMIN` | Creates a new reusable benefit (e.g. "Locker Facility") |
+
+### 2.4 Memberships Lifecycle (`/memberships`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/memberships` | `ADMIN` | Lists all active/expired memberships with filters |
+| `POST` | `/memberships` | `ADMIN` | Enrolls member with **plan snapshot** & generates invoice |
+| `GET` | `/memberships/:id`| `ADMIN`, `MEMBER (Own)` | Returns subscription details, freeze logs, and snapshots |
+| `POST` | `/memberships/:id/renew` | `ADMIN` | Renews subscription for next period without overwriting history |
+| `POST` | `/memberships/:id/freeze`| `ADMIN` | Freezes membership with reason and adjusts `end_date` |
+| `POST` | `/memberships/:id/cancel`| `ADMIN` | Cancels subscription with policy rationale |
+| `GET` | `/memberships/expiring` | `ADMIN` | Lists memberships expiring in next 30, 15, 7, or 3 days |
+
+### 2.5 Members & Trainers (`/members`, `/trainers`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/members` | `ADMIN` | Searchable directory of members with codes and dues |
+| `POST` | `/members` | `ADMIN` | Creates member profile linked to existing or new user |
+| `GET` | `/members/:id` | `ADMIN`, `TRAINER (Assigned)` | Member profile with full history and goals |
+| `PATCH`| `/members/:id` | `ADMIN` | Updates member personal info or notes |
+| `POST` | `/members/:id/assign-trainer` | `ADMIN` | Assigns or reassigns personal trainer |
+| `GET` | `/trainers` | `ADMIN` | Directory of trainers and workload statistics |
+| `POST` | `/trainers` | `ADMIN` | Registers and provisions a trainer profile |
+| `GET` | `/trainers/:id/members` | `ADMIN`, `TRAINER (Own)` | Lists members assigned to a specific trainer |
+
+### 2.6 Attendance & Check-in (`/attendance`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/attendance/check-in` | `ADMIN`, `TRAINER` | Manual desk check-in by member ID |
+| `GET` | `/attendance/qr-token` | `MEMBER (Own)` | Generates short-lived, rotating HMAC QR token for check-in |
+| `POST` | `/attendance/scan` | `ADMIN`, `TRAINER` | Verifies and consumes QR token, recording check-in |
+| `GET` | `/attendance/daily` | `ADMIN` | Daily roll-call log with timestamps and peak-hour analysis |
+| `GET` | `/attendance/history/:memberId`| `ADMIN`, `TRAINER`, `MEMBER (Own)` | Attendance history for a member |
+
+### 2.7 Fitness Assessments, Workouts & Diets (`/fitness`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/fitness/assessments` | `ADMIN`, `TRAINER` | Logs body measurements & calculates BMI |
+| `GET` | `/fitness/assessments/:memberId`| `ADMIN`, `TRAINER`, `MEMBER (Own)` | Historical progress measurements and trends |
+| `POST` | `/fitness/goals` | `ADMIN`, `TRAINER`, `MEMBER (Own)` | Sets or updates member fitness objective |
+| `GET` | `/fitness/workouts/:memberId`| `ADMIN`, `TRAINER`, `MEMBER (Own)` | Returns active workout schedule and exercises |
+| `POST` | `/fitness/workouts` | `ADMIN`, `TRAINER` | Creates custom workout plan with daily split |
+| `GET` | `/fitness/diets/:memberId` | `ADMIN`, `TRAINER`, `MEMBER (Own)` | Returns active nutrition plan and meal splits |
+| `POST` | `/fitness/diets` | `ADMIN`, `TRAINER` | Creates custom meal plan with calorie & macro goals |
+
+### 2.8 Billing, Invoices, Payments & Receipts (`/invoices`, `/payments`, `/receipts`, `/refunds`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/invoices` | `ADMIN`, `MEMBER (Own)` | Lists tax invoices with status, dues, and dates |
+| `POST` | `/invoices` | `ADMIN` | Creates invoice with dynamic line items & tax |
+| `GET` | `/invoices/:id` | `ADMIN`, `MEMBER (Own)` | Full invoice document with GST and payments |
+| `POST` | `/invoices/:id/issue`| `ADMIN` | Transitions `DRAFT` $\rightarrow$ `ISSUED` |
+| `POST` | `/invoices/:id/cancel`| `ADMIN` | Cancels unpaid invoice |
+| `GET` | `/payments` | `ADMIN`, `MEMBER (Own)` | Transaction ledger with method filters |
+| `POST` | `/payments` | `ADMIN` | Records cash, UPI, card, or bank collection |
+| `GET` | `/payments/:id` | `ADMIN`, `MEMBER (Own)` | Payment voucher with receipt link |
+| `POST` | `/payments/:id/reverse` | `ADMIN` | Reverses payment and restores invoice due |
+| `GET` | `/receipts` | `ADMIN`, `MEMBER (Own)` | Receipts repository with payment proofs |
+| `GET` | `/receipts/:id/pdf` | `ADMIN`, `MEMBER (Own)` | Generates and streams official PDFKit receipt |
+| `GET` | `/refunds` | `ADMIN` | Lists refund requests and status |
+| `POST` | `/refunds` | `ADMIN` | Initiates refund request with audit reason |
+| `POST` | `/refunds/:id/approve` | `ADMIN` | Approves refund request |
+| `POST` | `/refunds/:id/process` | `ADMIN` | Disburses refund and updates ledger atomically |
+
+### 2.9 Expenses, Reports & Closings (`/expenses`, `/reports`, `/daily-closings`, `/reconciliation`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/expenses` | `ADMIN` | Filterable log of operational expenses |
+| `POST` | `/expenses` | `ADMIN` | Records expense voucher (Rent, Electricity, Maintenance) |
+| `GET` | `/reports/summary` | `ADMIN` | Realized revenue, collected cash, refunds, net operating result |
+| `GET` | `/reports/collections-by-method`| `ADMIN` | Breakdown by payment channel (Cash vs. UPI vs. Card) |
+| `GET` | `/reports/outstanding` | `ADMIN` | Aging report (Current, 1-30d, 31-60d, 61-90d, 90+d) |
+| `GET` | `/reports/pnl` | `ADMIN` | Net Operating Income: Collections minus operating expenses |
+| `GET` | `/reports/attendance` | `ADMIN` | Attendance metrics, peak hours, and visit frequencies |
+| `GET` | `/daily-closings` | `ADMIN` | Historical daily register closings |
+| `POST` | `/daily-closings/close` | `ADMIN` | Submits declared cash/digital handovers & calculates variance |
+| `POST` | `/reconciliation` | `ADMIN` | Audits system ledger against declared bank accounts |
+
+### 2.10 Notifications, Audit & Settings (`/notifications`, `/audit-logs`, `/settings`)
+| Method | Endpoint | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/notifications` | `ADMIN`, `MEMBER`, `TRAINER` | Returns in-app notifications for authenticated user |
+| `POST` | `/notifications` | `ADMIN` | Broadcasts targeted alert (`ALL`, `EXPIRING`, `UNPAID`) |
+| `PATCH`| `/notifications/:id/read` | Authenticated | Marks notification as read |
+| `GET` | `/audit-logs` | `ADMIN` | Chronological audit trail with JSON payload diffs |
+| `GET` | `/settings` | `ADMIN` | Returns gym profile, GSTIN, prefixes, and thresholds |
+| `PATCH`| `/settings` | `ADMIN` | Updates system configuration parameters |

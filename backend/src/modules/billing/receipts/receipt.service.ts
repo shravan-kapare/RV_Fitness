@@ -39,6 +39,10 @@ export class ReceiptService {
 
     if (!receipt) throw new NotFoundError('Receipt not found');
 
+    if (user && user.role === UserRole.TRAINER) {
+      throw new ForbiddenError('Trainers do not have access to billing operations');
+    }
+
     if (user && user.role === UserRole.MEMBER && receipt.member.userId !== user.id) {
       throw new ForbiddenError('You can only access your own payment receipts');
     }
@@ -56,6 +60,10 @@ export class ReceiptService {
     },
     user?: { id: string; role: UserRole }
   ) {
+    if (user && user.role === UserRole.TRAINER) {
+      throw new ForbiddenError('Trainers do not have access to billing operations');
+    }
+
     const page = Math.max(1, filters.page || 1);
     const limit = Math.min(100, Math.max(1, filters.limit || 20));
     const skip = (page - 1) * limit;

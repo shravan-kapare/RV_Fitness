@@ -12,13 +12,16 @@ export async function authenticate(
 ): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedError('Authentication token is required');
+    let token: string | undefined;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    } else if (req.query && typeof req.query.token === 'string') {
+      token = req.query.token;
     }
 
-    const token = authHeader.split(' ')[1];
     if (!token) {
-      throw new UnauthorizedError('Authentication token is invalid');
+      throw new UnauthorizedError('Authentication token is required');
     }
 
     const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;

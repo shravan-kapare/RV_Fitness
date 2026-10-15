@@ -439,3 +439,234 @@ export interface ApiResponse<T> {
     details?: { field: string; message: string }[];
   };
 }
+
+// Domain Extensions: Benefits & Trainers
+export interface Benefit {
+  id: string;
+  name: string;
+  description?: string | null;
+  icon?: string | null;
+  category: string;
+  createdAt: string;
+}
+
+export interface PlanBenefit {
+  id: string;
+  planId: string;
+  benefitId: string;
+  displayOrder: number;
+  isIncluded: boolean;
+  benefit: Benefit;
+}
+
+export interface Trainer {
+  id: string;
+  userId: string;
+  specialization: string;
+  bio?: string | null;
+  experienceYears: number;
+  certifications?: string | null;
+  photoUrl?: string | null;
+  rating: number;
+  isAvailable: boolean;
+  isPublished: boolean;
+  displayOrder: number;
+  user?: {
+    id: string;
+    fullName: string;
+    email: string;
+    phone?: string | null;
+  };
+}
+
+// Attendance Types
+export interface Attendance {
+  id: string;
+  memberId: string;
+  checkInTime: string;
+  checkOutTime?: string | null;
+  method: 'QR_SCAN' | 'MANUAL_DESK' | 'BIOMETRIC';
+  status: 'PRESENT' | 'LATE' | 'EXCUSED';
+  member?: Member;
+}
+
+export interface AttendanceQrToken {
+  qrPayload: string;
+  expiresAt: string;
+  memberCode: string;
+  memberName: string;
+}
+
+// Fitness Types
+export interface FitnessAssessment {
+  id: string;
+  memberId: string;
+  assessmentDate: string;
+  weightKg: number;
+  heightCm: number;
+  bmi: number;
+  bodyFatPct?: number | null;
+  chestCm?: number | null;
+  waistCm?: number | null;
+  armsCm?: number | null;
+  thighsCm?: number | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface FitnessGoal {
+  id: string;
+  memberId: string;
+  goalType: string;
+  targetValue?: string | null;
+  targetDate?: string | null;
+  status: string;
+}
+
+export interface WorkoutExercise {
+  id: string;
+  exerciseName: string;
+  sets: number;
+  reps: string;
+  restSeconds?: number | null;
+  orderIndex: number;
+}
+
+export interface WorkoutDay {
+  id: string;
+  dayNumber: number;
+  dayTitle: string;
+  restDay: boolean;
+  exercises: WorkoutExercise[];
+}
+
+export interface WorkoutPlan {
+  id: string;
+  memberId: string;
+  trainerId: string;
+  title: string;
+  description?: string | null;
+  startDate: string;
+  endDate?: string | null;
+  isActive: boolean;
+  days: WorkoutDay[];
+  trainer?: Trainer;
+}
+
+export interface DietMeal {
+  id: string;
+  mealName: string;
+  foodItems: string;
+  calories?: number | null;
+  orderIndex: number;
+}
+
+export interface DietPlan {
+  id: string;
+  memberId: string;
+  trainerId: string;
+  title: string;
+  dailyCalories: number;
+  proteinGrams: number;
+  carbsGrams: number;
+  fatsGrams: number;
+  guidelines?: string | null;
+  isActive: boolean;
+  meals: DietMeal[];
+  trainer?: Trainer;
+}
+
+// Expenses
+export type ExpenseCategory =
+  | 'EQUIPMENT'
+  | 'MAINTENANCE'
+  | 'SALARY'
+  | 'RENT'
+  | 'UTILITIES'
+  | 'MARKETING'
+  | 'SUPPLEMENTS'
+  | 'OTHER';
+
+export interface Expense {
+  id: string;
+  expenseNumber: string;
+  category: ExpenseCategory;
+  title: string;
+  description?: string | null;
+  amountPaisa: number;
+  expenseDate: string;
+  paymentMethod: string;
+  referenceNumber?: string | null;
+  recordedBy: string;
+  createdAt: string;
+  recorder?: {
+    id: string;
+    fullName: string;
+    email: string;
+  };
+}
+
+// CMS & Communications
+export interface GymEvent {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  eventDate: string;
+  location: string;
+  bannerUrl?: string | null;
+  isPublished: boolean;
+}
+
+export interface GalleryPost {
+  id: string;
+  title: string;
+  category: 'TRANSFORMATION' | 'EQUIPMENT' | 'WORKOUT' | 'FACILITY' | 'COMMUNITY';
+  imageUrl: string;
+  caption?: string | null;
+  displayOrder: number;
+  isPublished: boolean;
+}
+
+export interface OfferCoupon {
+  id: string;
+  code: string;
+  title: string;
+  discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  discountValue: number;
+  validFrom: string;
+  validTo: string;
+  usageLimit?: number | null;
+  usedCount: number;
+  isActive: boolean;
+}
+
+export interface ContactInquiry {
+  id: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  subject: string;
+  message: string;
+  status: 'NEW' | 'CONTACTED' | 'RESOLVED' | 'DISMISSED';
+  createdAt: string;
+}
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  type: 'INFO' | 'WARNING' | 'SUCCESS' | 'ALERT' | 'SYSTEM';
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface PublicHomeData {
+  plans: (MembershipPlan & { planBenefits?: PlanBenefit[] })[];
+  trainers: Trainer[];
+  events: GymEvent[];
+  gallery: GalleryPost[];
+  offers: OfferCoupon[];
+  settings: Record<string, string>;
+}
+

@@ -68,4 +68,37 @@ export class MemberController {
       next(error);
     }
   }
+
+  public static async getMyProfile(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const profile = await MemberService.getMemberProfileByUserId(req.user!.id);
+      res.status(200).json({
+        success: true,
+        data: profile,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async getOnboardingStatus(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const status = await MemberService.getOnboardingStatus(req.user!.id);
+      res.status(200).json({
+        success: true,
+        data: status,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async completeOnboarding(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const result = await MemberService.completeOnboarding(req.user!.id, req.body);
+      res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

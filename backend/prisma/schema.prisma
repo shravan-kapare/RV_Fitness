@@ -91,8 +91,80 @@ enum ClosingStatus {
   VERIFIED
 }
 
+enum AttendanceMethod {
+  QR_CODE
+  MANUAL_DESK
+  TRAINER_LOG
+}
+
+enum GoalType {
+  WEIGHT_LOSS
+  MUSCLE_GAIN
+  STRENGTH
+  ENDURANCE
+  GENERAL_FITNESS
+}
+
+enum GoalStatus {
+  IN_PROGRESS
+  ACHIEVED
+  ABANDONED
+}
+
+enum ExpenseCategory {
+  RENT
+  ELECTRICITY
+  SALARY
+  EQUIPMENT_MAINTENANCE
+  CLEANING
+  MARKETING
+  SUPPLIES
+  OTHER
+}
+
+enum GalleryCategory {
+  EQUIPMENT
+  FACILITY
+  TRANSFORMATION
+  COMMUNITY
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
+enum InquiryStatus {
+  NEW
+  READ
+  RESPONDED
+}
+
+enum NotificationType {
+  GENERAL
+  EXPIRY_WARNING
+  PAYMENT_REMINDER
+  WORKOUT_ASSIGNED
+  DIET_ASSIGNED
+  ANNOUNCEMENT
+}
+
+enum NotificationTarget {
+  ALL
+  EXPIRING_MEMBERS
+  UNPAID_MEMBERS
+  TRAINER_MEMBERS
+  SPECIFIC_USER
+}
+
+enum EquipmentStatus {
+  OPERATIONAL
+  MAINTENANCE
+  OUT_OF_ORDER
+}
+
 // ==========================================
-// 1. Users
+// 1. Users & Authentication
 // ==========================================
 
 model User {
@@ -109,6 +181,7 @@ model User {
 
   // Relations
   memberProfile         Member?
+  trainerProfile        Trainer?
   createdInvoices       Invoice[]                 @relation("InvoiceCreatedBy")
   recordedPayments      Payment[]                 @relation("PaymentRecordedBy")
   issuedReceipts        Receipt[]                 @relation("ReceiptIssuedBy")
@@ -119,6 +192,11 @@ model User {
   reconciliations       ReconciliationRecord[]    @relation("ReconciliationPerformedBy")
   dailyClosings         DailyCollectionClosing[]  @relation("ClosingClosedBy")
   updatedSettings       GymSetting[]              @relation("SettingUpdatedBy")
+  recordedExpenses      Expense[]                 @relation("ExpenseRecordedBy")
+  recordedAssessments   FitnessAssessment[]       @relation("AssessmentRecordedBy")
+  approvedFreezes       MembershipFreeze[]        @relation("FreezeApprovedBy")
+  verifiedAttendances   Attendance[]              @relation("AttendanceVerifiedBy")
+  notifications         Notification[]            @relation("UserNotifications")
 
   @@index([email])
   @@index([role])
@@ -126,78 +204,154 @@ model User {
 }
 
 // ==========================================
-// 2. Members (Shared profile interface)
+// 2. Members & Trainers
 // ==========================================
 
 model Member {
   id               String    @id @default(uuid()) @db.VarChar(36)
   userId           String    @unique @map("user_id") @db.VarChar(36)
   memberCode       String    @unique @map("member_code") @db.VarChar(20)
+  trainerId        String?   @map("trainer_id") @db.VarChar(36)
   dateOfBirth      DateTime? @map("date_of_birth") @db.Date
   gender           Gender?
   address          String?   @db.Text
   emergencyContact String?   @map("emergency_contact") @db.VarChar(20)
   joinDate         DateTime  @default(now()) @map("join_date") @db.Date
-  photoUrl         String?   @map("photo_url") @db.VarChar(500)
-  notes            String?   @db.Text
-  isActive         Boolean   @default(true) @map("is_active")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  photoUrl            String?   @map("photo_url") @db.VarChar(500)
+  notes               String?   @db.Text
+  isActive            Boolean   @default(true) @map("is_active")
+  onboardingCompleted Boolean   @default(false) @map("onboarding_completed")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  memberships  Membership[]
-  invoices     Invoice[]
-  payments     Payment[]
-  receipts     Receipt[]
-  refunds      Refund[]
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trainer          Trainer?           @relation(fields: [trainerId], references: [id], onDelete: SetNull)
+  memberships      Membership[]
+  invoices         Invoice[]
+  payments         Payment[]
+  receipts         Receipt[]
+  refunds          Refund[]
+  attendances      Attendance[]
+  qrTokens         AttendanceQrToken[]
+  assessments      FitnessAssessment[]
+  fitnessGoals     FitnessGoal[]
+  workoutPlans     WorkoutPlan[]
+  dietPlans        DietPlan[]
 
   @@index([userId])
   @@index([memberCode])
+  @@index([trainerId])
   @@index([isActive])
   @@map("members")
 }
 
-// ==========================================
-// 3. Membership Plans (Shared interface)
-// ==========================================
-
-model MembershipPlan {
-  id           String       @id @default(uuid()) @db.VarChar(36)
-  name         String       @db.VarChar(100)
-  description  String?      @db.Text
-  durationDays Int          @map("duration_days")
-  pricePaisa   BigInt       @map("price_paisa")
-  taxRateBps   Int          @default(0) @map("tax_rate_bps")
-  isActive     Boolean      @default(true) @map("is_active")
-  createdAt    DateTime     @default(now()) @map("created_at")
-  updatedAt    DateTime     @updatedAt @map("updated_at")
+model Trainer {
+  id              String   @id @default(uuid()) @db.VarChar(36)
+  userId          String   @unique @map("user_id") @db.VarChar(36)
+  specialization  String   @db.VarChar(255)
+  bio             String?  @db.Text
+  experienceYears Int      @default(0) @map("experience_years")
+  certifications  String?  @db.Text
+  photoUrl        String?  @map("photo_url") @db.VarChar(500)
+  rating          Decimal  @default(5.00) @db.Decimal(3, 2)
+  isAvailable     Boolean  @default(true) @map("is_available")
+  isPublished     Boolean  @default(true) @map("is_published")
+  displayOrder    Int      @default(0) @map("display_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   // Relations
-  memberships  Membership[]
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedMembers Member[]
+  workoutPlans    WorkoutPlan[]
+  dietPlans       DietPlan[]
+  attendances     TrainerAttendance[]
 
-  @@index([isActive])
-  @@map("membership_plans")
+  @@index([userId])
+  @@index([isPublished])
+  @@map("trainers")
 }
 
 // ==========================================
-// 4. Memberships (Shared interface)
+// 3. Membership Plans & Dynamic Benefits
 // ==========================================
 
-model Membership {
-  id        String           @id @default(uuid()) @db.VarChar(36)
-  memberId  String           @map("member_id") @db.VarChar(36)
-  planId    String           @map("plan_id") @db.VarChar(36)
-  startDate DateTime         @map("start_date") @db.Date
-  endDate   DateTime         @map("end_date") @db.Date
-  status    MembershipStatus @default(ACTIVE)
-  createdAt DateTime         @default(now()) @map("created_at")
-  updatedAt DateTime         @updatedAt @map("updated_at")
+model MembershipPlan {
+  id                    String        @id @default(uuid()) @db.VarChar(36)
+  name                  String        @db.VarChar(100)
+  slug                  String?       @unique @db.VarChar(100)
+  description           String?       @db.Text
+  durationDays          Int           @map("duration_days")
+  pricePaisa            BigInt        @map("price_paisa")
+  promotionalPricePaisa BigInt?       @map("promotional_price_paisa")
+  promoStartDate        DateTime?     @map("promo_start_date")
+  promoEndDate          DateTime?     @map("promo_end_date")
+  taxRateBps            Int           @default(1800) @map("tax_rate_bps")
+  isPopular             Boolean       @default(false) @map("is_popular")
+  displayOrder          Int           @default(0) @map("display_order")
+  isActive              Boolean       @default(true) @map("is_active")
+  isPublished           Boolean       @default(true) @map("is_published")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  member       Member         @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  plan         MembershipPlan @relation(fields: [planId], references: [id])
+  memberships           Membership[]
+  planBenefits          PlanBenefit[]
+
+  @@index([isActive])
+  @@index([isPublished])
+  @@map("membership_plans")
+}
+
+model Benefit {
+  id          String        @id @default(uuid()) @db.VarChar(36)
+  title       String        @db.VarChar(255)
+  description String?       @db.Text
+  iconName    String        @default("Check") @map("icon_name") @db.VarChar(50)
+  isActive    Boolean       @default(true) @map("is_active")
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  planBenefits PlanBenefit[]
+
+  @@map("benefits")
+}
+
+model PlanBenefit {
+  id           String         @id @default(uuid()) @db.VarChar(36)
+  planId       String         @map("plan_id") @db.VarChar(36)
+  benefitId    String         @map("benefit_id") @db.VarChar(36)
+  displayOrder Int            @default(0) @map("display_order")
+  isIncluded   Boolean        @default(true) @map("is_included")
+
+  // Relations
+  plan         MembershipPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  benefit      Benefit        @relation(fields: [benefitId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, benefitId])
+  @@map("plan_benefits")
+}
+
+model Membership {
+  id           String           @id @default(uuid()) @db.VarChar(36)
+  memberId     String           @map("member_id") @db.VarChar(36)
+  planId       String           @map("plan_id") @db.VarChar(36)
+  planSnapshot Json?            @map("plan_snapshot")
+  startDate    DateTime         @map("start_date") @db.Date
+  endDate      DateTime         @map("end_date") @db.Date
+  status       MembershipStatus @default(ACTIVE)
+  autoRenew    Boolean          @default(false) @map("auto_renew")
+  notes        String?          @db.Text
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  member       Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  plan         MembershipPlan   @relation(fields: [planId], references: [id])
   invoiceItems InvoiceItem[]
+  freezes      MembershipFreeze[]
+  reminders    RenewalReminder[]
 
   @@index([memberId])
   @@index([status])
@@ -205,37 +359,284 @@ model Membership {
   @@map("memberships")
 }
 
+model MembershipFreeze {
+  id            String     @id @default(uuid()) @db.VarChar(36)
+  membershipId  String     @map("membership_id") @db.VarChar(36)
+  startDate     DateTime   @map("start_date") @db.Date
+  endDate       DateTime   @map("end_date") @db.Date
+  actualEndDate DateTime?  @map("actual_end_date") @db.Date
+  reason        String     @db.Text
+  daysExtended  Int        @default(0) @map("days_extended")
+  approvedBy    String?    @map("approved_by") @db.VarChar(36)
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+  // Relations
+  membership    Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  approver      User?      @relation("FreezeApprovedBy", fields: [approvedBy], references: [id])
+
+  @@index([membershipId])
+  @@map("membership_freezes")
+}
+
+model RenewalReminder {
+  id           String     @id @default(uuid()) @db.VarChar(36)
+  membershipId String     @map("membership_id") @db.VarChar(36)
+  reminderType String     @map("reminder_type") @db.VarChar(10) // 30D, 15D, 7D, 3D
+  channel      String     @default("IN_APP") @db.VarChar(20)
+  sentAt       DateTime   @default(now()) @map("sent_at")
+
+  // Relations
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([membershipId])
+  @@map("renewal_reminders")
+}
+
 // ==========================================
-// 5. Invoices
+// 4. Attendance & QR Token Engine
+// ==========================================
+
+model Attendance {
+  id           String           @id @default(uuid()) @db.VarChar(36)
+  memberId     String           @map("member_id") @db.VarChar(36)
+  date         DateTime         @db.Date
+  checkInTime  DateTime         @default(now()) @map("check_in_time")
+  checkOutTime DateTime?        @map("check_out_time")
+  method       AttendanceMethod @default(QR_CODE)
+  verifiedBy   String?          @map("verified_by") @db.VarChar(36)
+  notes        String?          @db.VarChar(255)
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  member       Member           @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  verifier     User?            @relation("AttendanceVerifiedBy", fields: [verifiedBy], references: [id])
+
+  @@unique([memberId, date])
+  @@index([date])
+  @@index([memberId])
+  @@map("attendances")
+}
+
+model AttendanceQrToken {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  memberId  String   @map("member_id") @db.VarChar(36)
+  token     String   @unique @db.VarChar(255)
+  expiresAt DateTime @map("expires_at")
+  isRevoked Boolean  @default(false) @map("is_revoked")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([memberId])
+  @@map("attendance_qr_tokens")
+}
+
+model TrainerAttendance {
+  id           String    @id @default(uuid()) @db.VarChar(36)
+  trainerId    String    @map("trainer_id") @db.VarChar(36)
+  date         DateTime  @db.Date
+  checkInTime  DateTime  @default(now()) @map("check_in_time")
+  checkOutTime DateTime? @map("check_out_time")
+  notes        String?   @db.VarChar(255)
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  trainer      Trainer   @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@index([trainerId])
+  @@index([date])
+  @@map("trainer_attendances")
+}
+
+// ==========================================
+// 5. Fitness Assessments, Workouts & Diets
+// ==========================================
+
+model FitnessAssessment {
+  id             String   @id @default(uuid()) @db.VarChar(36)
+  memberId       String   @map("member_id") @db.VarChar(36)
+  recordedBy     String   @map("recorded_by") @db.VarChar(36)
+  assessmentDate DateTime @map("assessment_date") @db.Date
+  weightKg       Decimal  @map("weight_kg") @db.Decimal(5, 2)
+  heightCm       Decimal  @map("height_cm") @db.Decimal(5, 2)
+  bmi            Decimal  @db.Decimal(4, 2)
+  bodyFatPct     Decimal? @map("body_fat_pct") @db.Decimal(4, 2)
+  chestCm        Decimal? @map("chest_cm") @db.Decimal(5, 2)
+  waistCm        Decimal? @map("waist_cm") @db.Decimal(5, 2)
+  armsCm         Decimal? @map("arms_cm") @db.Decimal(5, 2)
+  thighsCm       Decimal? @map("thighs_cm") @db.Decimal(5, 2)
+  notes          String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  member         Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  recorder       User     @relation("AssessmentRecordedBy", fields: [recordedBy], references: [id])
+
+  @@index([memberId])
+  @@index([assessmentDate])
+  @@map("fitness_assessments")
+}
+
+model FitnessGoal {
+  id          String     @id @default(uuid()) @db.VarChar(36)
+  memberId    String     @map("member_id") @db.VarChar(36)
+  goalType    GoalType   @map("goal_type")
+  targetValue String?    @map("target_value") @db.VarChar(100)
+  targetDate  DateTime?  @map("target_date") @db.Date
+  status      GoalStatus @default(IN_PROGRESS)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  member      Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([memberId])
+  @@map("fitness_goals")
+}
+
+model WorkoutPlan {
+  id          String        @id @default(uuid()) @db.VarChar(36)
+  memberId    String        @map("member_id") @db.VarChar(36)
+  trainerId   String        @map("trainer_id") @db.VarChar(36)
+  title       String        @db.VarChar(255)
+  description String?       @db.Text
+  startDate   DateTime      @map("start_date") @db.Date
+  endDate     DateTime?     @map("end_date") @db.Date
+  isActive    Boolean       @default(true) @map("is_active")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  member      Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  trainer     Trainer       @relation(fields: [trainerId], references: [id])
+  days        WorkoutDay[]
+
+  @@index([memberId])
+  @@index([trainerId])
+  @@map("workout_plans")
+}
+
+model WorkoutDay {
+  id        String            @id @default(uuid()) @db.VarChar(36)
+  planId    String            @map("plan_id") @db.VarChar(36)
+  dayNumber Int               @map("day_number")
+  dayTitle  String            @map("day_title") @db.VarChar(100)
+  restDay   Boolean           @default(false) @map("rest_day")
+
+  // Relations
+  plan      WorkoutPlan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+  exercises WorkoutExercise[]
+
+  @@index([planId])
+  @@map("workout_days")
+}
+
+model WorkoutExercise {
+  id                      String     @id @default(uuid()) @db.VarChar(36)
+  dayId                   String     @map("day_id") @db.VarChar(36)
+  exerciseName            String     @map("exercise_name") @db.VarChar(255)
+  targetMuscle            String?    @map("target_muscle") @db.VarChar(50)
+  requiredEquipment       String?    @map("required_equipment") @db.VarChar(100)
+  alternativeExerciseName String?    @map("alternative_exercise_name") @db.VarChar(255)
+  sets                    Int
+  reps                    String     @db.VarChar(50)
+  restSeconds             Int?       @default(90) @map("rest_seconds")
+  orderIndex              Int        @default(0) @map("order_index")
+
+  // Relations
+  day          WorkoutDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  @@index([dayId])
+  @@map("workout_exercises")
+}
+
+model Equipment {
+  id           String          @id @default(uuid()) @db.VarChar(36)
+  name         String          @db.VarChar(100)
+  category     String          @db.VarChar(50) // STRENGTH, CARDIO, FREE_WEIGHTS, CABLES
+  targetMuscle String          @map("target_muscle") @db.VarChar(50) // CHEST, BACK, LEGS, SHOULDERS, ARMS, CORE
+  status       EquipmentStatus @default(OPERATIONAL)
+  notes        String?         @db.Text
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([category])
+  @@map("equipment")
+}
+
+model DietPlan {
+  id            String     @id @default(uuid()) @db.VarChar(36)
+  memberId      String     @map("member_id") @db.VarChar(36)
+  trainerId     String     @map("trainer_id") @db.VarChar(36)
+  title         String     @db.VarChar(255)
+  dailyCalories Int        @map("daily_calories")
+  proteinGrams  Int        @map("protein_grams")
+  carbsGrams    Int        @map("carbs_grams")
+  fatsGrams     Int        @map("fats_grams")
+  guidelines    String?    @db.Text
+  isActive      Boolean    @default(true) @map("is_active")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  member        Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  trainer       Trainer    @relation(fields: [trainerId], references: [id])
+  meals         DietMeal[]
+
+  @@index([memberId])
+  @@index([trainerId])
+  @@map("diet_plans")
+}
+
+model DietMeal {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  dietPlanId String   @map("diet_plan_id") @db.VarChar(36)
+  mealName   String   @map("meal_name") @db.VarChar(100)
+  foodItems  String   @map("food_items") @db.Text
+  calories   Int?
+  orderIndex Int      @default(0) @map("order_index")
+
+  // Relations
+  dietPlan   DietPlan @relation(fields: [dietPlanId], references: [id], onDelete: Cascade)
+
+  @@index([dietPlanId])
+  @@map("diet_meals")
+}
+
+// ==========================================
+// 6. Billing, Invoices, Payments & Receipts
 // ==========================================
 
 model Invoice {
-  id             String        @id @default(uuid()) @db.VarChar(36)
-  invoiceNumber  String        @unique @map("invoice_number") @db.VarChar(30)
-  memberId       String        @map("member_id") @db.VarChar(36)
-  status         InvoiceStatus @default(DRAFT)
-  subtotalPaisa  BigInt        @map("subtotal_paisa")
-  taxPaisa       BigInt        @default(0) @map("tax_paisa")
-  discountPaisa  BigInt        @default(0) @map("discount_paisa")
-  totalPaisa     BigInt        @map("total_paisa")
-  paidPaisa      BigInt        @default(0) @map("paid_paisa")
-  dueDate        DateTime      @map("due_date") @db.Date
-  issuedAt       DateTime?     @map("issued_at")
-  notes          String?       @db.Text
-  internalNotes  String?       @map("internal_notes") @db.Text
-  createdBy      String        @map("created_by") @db.VarChar(36)
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+  id            String        @id @default(uuid()) @db.VarChar(36)
+  invoiceNumber String        @unique @map("invoice_number") @db.VarChar(30)
+  memberId      String        @map("member_id") @db.VarChar(36)
+  status        InvoiceStatus @default(DRAFT)
+  subtotalPaisa BigInt        @map("subtotal_paisa")
+  taxPaisa      BigInt        @default(0) @map("tax_paisa")
+  discountPaisa BigInt        @default(0) @map("discount_paisa")
+  totalPaisa    BigInt        @map("total_paisa")
+  paidPaisa     BigInt        @default(0) @map("paid_paisa")
+  dueDate       DateTime      @map("due_date") @db.Date
+  issuedAt      DateTime?     @map("issued_at")
+  notes         String?       @db.Text
+  internalNotes String?       @map("internal_notes") @db.Text
+  createdBy     String        @map("created_by") @db.VarChar(36)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  member         Member                @relation(fields: [memberId], references: [id], onDelete: Restrict)
-  creator        User                  @relation("InvoiceCreatedBy", fields: [createdBy], references: [id])
-  items          InvoiceItem[]
-  payments       Payment[]
-  allocations    PaymentAllocation[]
-  receipts       Receipt[]
-  refunds        Refund[]
-  adjustments    FinancialAdjustment[]
+  member        Member                @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  creator       User                  @relation("InvoiceCreatedBy", fields: [createdBy], references: [id])
+  items         InvoiceItem[]
+  payments      Payment[]
+  allocations   PaymentAllocation[]
+  receipts      Receipt[]
+  refunds       Refund[]
+  adjustments   FinancialAdjustment[]
 
   @@index([invoiceNumber])
   @@index([memberId])
@@ -245,34 +646,26 @@ model Invoice {
   @@map("invoices")
 }
 
-// ==========================================
-// 6. Invoice Items (Price snapshotted)
-// ==========================================
-
 model InvoiceItem {
-  id             String      @id @default(uuid()) @db.VarChar(36)
-  invoiceId      String      @map("invoice_id") @db.VarChar(36)
-  membershipId   String?     @map("membership_id") @db.VarChar(36)
-  description    String      @db.VarChar(255)
-  quantity       Int         @default(1)
-  unitPricePaisa BigInt      @map("unit_price_paisa")
-  taxRateBps     Int         @default(0) @map("tax_rate_bps")
-  taxPaisa       BigInt      @default(0) @map("tax_paisa")
-  discountPaisa  BigInt      @default(0) @map("discount_paisa")
-  totalPaisa     BigInt      @map("total_paisa")
-  createdAt      DateTime    @default(now()) @map("created_at")
+  id             String       @id @default(uuid()) @db.VarChar(36)
+  invoiceId      String       @map("invoice_id") @db.VarChar(36)
+  membershipId   String?      @map("membership_id") @db.VarChar(36)
+  description    String       @db.VarChar(255)
+  quantity       Int          @default(1)
+  unitPricePaisa BigInt       @map("unit_price_paisa")
+  taxRateBps     Int          @default(1800) @map("tax_rate_bps")
+  taxPaisa       BigInt       @default(0) @map("tax_paisa")
+  discountPaisa  BigInt       @default(0) @map("discount_paisa")
+  totalPaisa     BigInt       @map("total_paisa")
+  createdAt      DateTime     @default(now()) @map("created_at")
 
   // Relations
-  invoice    Invoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-  membership Membership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  invoice        Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  membership     Membership?  @relation(fields: [membershipId], references: [id], onDelete: SetNull)
 
   @@index([invoiceId])
   @@map("invoice_items")
 }
-
-// ==========================================
-// 7. Payments
-// ==========================================
 
 model Payment {
   id              String        @id @default(uuid()) @db.VarChar(36)
@@ -281,10 +674,10 @@ model Payment {
   memberId        String        @map("member_id") @db.VarChar(36)
   amountPaisa     BigInt        @map("amount_paisa")
   method          PaymentMethod
-  status          PaymentStatus @default(PENDING)
+  status          PaymentStatus @default(CONFIRMED)
   referenceNumber String?       @map("reference_number") @db.VarChar(100)
-  idempotencyKey  String?       @unique @map("idempotency_key") @db.VarChar(100)
-  paymentDate     DateTime      @map("payment_date") @db.Date
+  idempotencyKey  String?       @unique @map("idempotency_key") @db.VarChar(255)
+  paymentDate     DateTime      @default(now()) @map("payment_date")
   notes           String?       @db.Text
   recordedBy      String        @map("recorded_by") @db.VarChar(36)
   confirmedAt     DateTime?     @map("confirmed_at")
@@ -292,26 +685,20 @@ model Payment {
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  invoice     Invoice             @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
-  member      Member              @relation(fields: [memberId], references: [id], onDelete: Restrict)
-  recorder    User                @relation("PaymentRecordedBy", fields: [recordedBy], references: [id])
-  allocations PaymentAllocation[]
-  receipt     Receipt?
-  refunds     Refund[]
+  invoice         Invoice             @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  member          Member              @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  recorder        User                @relation("PaymentRecordedBy", fields: [recordedBy], references: [id])
+  allocations     PaymentAllocation[]
+  receipt         Receipt?
+  refunds         Refund[]
 
   @@index([paymentNumber])
   @@index([invoiceId])
   @@index([memberId])
   @@index([status])
-  @@index([method])
-  @@index([referenceNumber])
   @@index([paymentDate])
   @@map("payments")
 }
-
-// ==========================================
-// 8. Payment Allocations
-// ==========================================
 
 model PaymentAllocation {
   id          String   @id @default(uuid()) @db.VarChar(36)
@@ -321,18 +708,12 @@ model PaymentAllocation {
   createdAt   DateTime @default(now()) @map("created_at")
 
   // Relations
-  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  payment     Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
 
   @@unique([paymentId, invoiceId])
-  @@index([paymentId])
-  @@index([invoiceId])
   @@map("payment_allocations")
 }
-
-// ==========================================
-// 9. Receipts
-// ==========================================
 
 model Receipt {
   id            String   @id @default(uuid()) @db.VarChar(36)
@@ -347,21 +728,16 @@ model Receipt {
   createdAt     DateTime @default(now()) @map("created_at")
 
   // Relations
-  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
-  member  Member  @relation(fields: [memberId], references: [id], onDelete: Restrict)
-  issuer  User    @relation("ReceiptIssuedBy", fields: [issuedBy], references: [id])
+  payment       Payment  @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  invoice       Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  member        Member   @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  issuer        User     @relation("ReceiptIssuedBy", fields: [issuedBy], references: [id])
 
   @@index([receiptNumber])
-  @@index([paymentId])
+  @@index([invoiceId])
   @@index([memberId])
-  @@index([issuedAt])
   @@map("receipts")
 }
-
-// ==========================================
-// 10. Refunds
-// ==========================================
 
 model Refund {
   id              String       @id @default(uuid()) @db.VarChar(36)
@@ -381,23 +757,18 @@ model Refund {
   updatedAt       DateTime     @updatedAt @map("updated_at")
 
   // Relations
-  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
-  member    Member  @relation(fields: [memberId], references: [id], onDelete: Restrict)
-  requester User    @relation("RefundRequestedBy", fields: [requestedBy], references: [id])
-  processor User?   @relation("RefundProcessedBy", fields: [processedBy], references: [id])
+  payment         Payment      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  invoice         Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  member          Member       @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  requester       User         @relation("RefundRequestedBy", fields: [requestedBy], references: [id])
+  processor       User?        @relation("RefundProcessedBy", fields: [processedBy], references: [id])
 
   @@index([refundNumber])
   @@index([paymentId])
   @@index([invoiceId])
   @@index([memberId])
-  @@index([status])
   @@map("refunds")
 }
-
-// ==========================================
-// 11. Financial Adjustments
-// ==========================================
 
 model FinancialAdjustment {
   id               String         @id @default(uuid()) @db.VarChar(36)
@@ -410,79 +781,69 @@ model FinancialAdjustment {
   createdAt        DateTime       @default(now()) @map("created_at")
 
   // Relations
-  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
-  performer User    @relation("AdjustmentPerformedBy", fields: [performedBy], references: [id])
+  invoice          Invoice        @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  performer        User           @relation("AdjustmentPerformedBy", fields: [performedBy], references: [id])
 
   @@index([adjustmentNumber])
   @@index([invoiceId])
-  @@index([type])
-  @@index([createdAt])
   @@map("financial_adjustments")
 }
 
 // ==========================================
-// 12. Audit Logs
+// 7. Expenses, Reconciliations & Closings
 // ==========================================
 
-model AuditLog {
-  id         String   @id @default(uuid()) @db.VarChar(36)
-  userId     String   @map("user_id") @db.VarChar(36)
-  action     String   @db.VarChar(100)
-  entityType String   @map("entity_type") @db.VarChar(50)
-  entityId   String   @map("entity_id") @db.VarChar(36)
-  oldValues  Json?    @map("old_values")
-  newValues  Json?    @map("new_values")
-  ipAddress  String?  @map("ip_address") @db.VarChar(45)
-  userAgent  String?  @map("user_agent") @db.VarChar(500)
-  createdAt  DateTime @default(now()) @map("created_at")
+model Expense {
+  id              String          @id @default(uuid()) @db.VarChar(36)
+  expenseNumber   String          @unique @map("expense_number") @db.VarChar(30)
+  category        ExpenseCategory
+  title           String          @db.VarChar(255)
+  description     String?         @db.Text
+  amountPaisa     BigInt          @map("amount_paisa")
+  expenseDate     DateTime        @map("expense_date") @db.Date
+  paymentMethod   String          @default("BANK_TRANSFER") @map("payment_method") @db.VarChar(50)
+  referenceNumber String?         @map("reference_number") @db.VarChar(100)
+  recordedBy      String          @map("recorded_by") @db.VarChar(36)
+  createdAt       DateTime        @default(now()) @map("created_at")
 
   // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  recorder        User            @relation("ExpenseRecordedBy", fields: [recordedBy], references: [id])
 
-  @@index([userId])
-  @@index([entityType, entityId])
-  @@index([action])
-  @@index([createdAt])
-  @@map("audit_logs")
+  @@index([expenseNumber])
+  @@index([category])
+  @@index([expenseDate])
+  @@map("expenses")
 }
 
-// ==========================================
-// 13. Reconciliation Records
-// ==========================================
-
 model ReconciliationRecord {
-  id                   String               @id @default(uuid()) @db.VarChar(36)
-  reconciliationDate   DateTime             @map("reconciliation_date") @db.Date
-  periodStart          DateTime             @map("period_start")
-  periodEnd            DateTime             @map("period_end")
-  recordedCashPaisa    BigInt               @default(0) @map("recorded_cash_paisa")
-  recordedUpiPaisa     BigInt               @default(0) @map("recorded_upi_paisa")
-  recordedCardPaisa    BigInt               @default(0) @map("recorded_card_paisa")
-  recordedBankPaisa    BigInt               @default(0) @map("recorded_bank_paisa")
-  recordedOtherPaisa   BigInt               @default(0) @map("recorded_other_paisa")
-  recordedTotalPaisa   BigInt               @map("recorded_total_paisa")
-  declaredCashPaisa    BigInt?              @map("declared_cash_paisa")
-  declaredDigitalPaisa BigInt?              @map("declared_digital_paisa")
-  declaredTotalPaisa   BigInt?              @map("declared_total_paisa")
-  discrepancyPaisa     BigInt?              @map("discrepancy_paisa")
-  status               ReconciliationStatus @default(PENDING)
-  notes                String?              @db.Text
-  performedBy          String               @map("performed_by") @db.VarChar(36)
-  createdAt            DateTime             @default(now()) @map("created_at")
-  updatedAt            DateTime             @updatedAt @map("updated_at")
+  id                 String               @id @default(uuid()) @db.VarChar(36)
+  reconciliationDate DateTime             @map("reconciliation_date") @db.Date
+  periodStart        DateTime             @map("period_start") @db.Date
+  periodEnd          DateTime             @map("period_end") @db.Date
+  recordedCashPaisa  BigInt               @default(0) @map("recorded_cash_paisa")
+  recordedUpiPaisa   BigInt               @default(0) @map("recorded_upi_paisa")
+  recordedCardPaisa  BigInt               @default(0) @map("recorded_card_paisa")
+  recordedBankPaisa  BigInt               @default(0) @map("recorded_bank_paisa")
+  recordedOtherPaisa BigInt               @default(0) @map("recorded_other_paisa")
+  recordedTotalPaisa BigInt               @map("recorded_total_paisa")
+  declaredCashPaisa  BigInt?              @map("declared_cash_paisa")
+  declaredDigitalPaisa BigInt?            @map("declared_digital_paisa")
+  declaredTotalPaisa BigInt?              @map("declared_total_paisa")
+  discrepancyPaisa   BigInt?              @map("discrepancy_paisa")
+  status             ReconciliationStatus @default(PENDING)
+  notes              String?              @db.Text
+  performedBy        String               @map("performed_by") @db.VarChar(36)
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
 
   // Relations
-  performer     User                     @relation("ReconciliationPerformedBy", fields: [performedBy], references: [id])
-  dailyClosings DailyCollectionClosing[]
+  performer          User                 @relation("ReconciliationPerformedBy", fields: [performedBy], references: [id])
+  closings           DailyCollectionClosing[]
 
   @@index([reconciliationDate])
   @@index([status])
   @@map("reconciliation_records")
 }
-
-// ==========================================
-// 14. Daily Collection Closings
-// ==========================================
 
 model DailyCollectionClosing {
   id                      String        @id @default(uuid()) @db.VarChar(36)
@@ -505,8 +866,8 @@ model DailyCollectionClosing {
   updatedAt               DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  reconciliation ReconciliationRecord? @relation(fields: [reconciliationId], references: [id], onDelete: SetNull)
-  closer         User?                 @relation("ClosingClosedBy", fields: [closedBy], references: [id])
+  reconciliation          ReconciliationRecord? @relation(fields: [reconciliationId], references: [id], onDelete: SetNull)
+  closer                  User?                 @relation("ClosingClosedBy", fields: [closedBy], references: [id])
 
   @@index([closingDate])
   @@index([status])
@@ -514,8 +875,107 @@ model DailyCollectionClosing {
 }
 
 // ==========================================
-// 15. Gym Settings
+// 8. CMS, Communication, Settings & Audit
 // ==========================================
+
+model GymEvent {
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  title       String   @db.VarChar(255)
+  slug        String   @unique @db.VarChar(255)
+  description String   @db.Text
+  eventDate   DateTime @map("event_date")
+  location    String   @default("RV Fitness Narsobawadi") @db.VarChar(255)
+  bannerUrl   String?  @map("banner_url") @db.VarChar(500)
+  isPublished Boolean  @default(true) @map("is_published")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([eventDate])
+  @@map("gym_events")
+}
+
+model GalleryPost {
+  id           String          @id @default(uuid()) @db.VarChar(36)
+  title        String          @db.VarChar(255)
+  category     GalleryCategory
+  imageUrl     String          @map("image_url") @db.VarChar(500)
+  caption      String?         @db.Text
+  displayOrder Int             @default(0) @map("display_order")
+  isPublished  Boolean         @default(true) @map("is_published")
+  createdAt    DateTime        @default(now()) @map("created_at")
+
+  @@index([category])
+  @@map("gallery_posts")
+}
+
+model OfferCoupon {
+  id            String       @id @default(uuid()) @db.VarChar(36)
+  code          String       @unique @db.VarChar(50)
+  title         String       @db.VarChar(255)
+  discountType  DiscountType @map("discount_type")
+  discountValue Int          @map("discount_value")
+  validFrom     DateTime     @map("valid_from")
+  validTo       DateTime     @map("valid_to")
+  usageLimit    Int?         @map("usage_limit")
+  usedCount     Int          @default(0) @map("used_count")
+  isActive      Boolean      @default(true) @map("is_active")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  @@index([code])
+  @@map("offers_coupons")
+}
+
+model ContactInquiry {
+  id        String        @id @default(uuid()) @db.VarChar(36)
+  fullName  String        @map("full_name") @db.VarChar(255)
+  email     String        @db.VarChar(255)
+  phone     String        @db.VarChar(20)
+  subject   String        @db.VarChar(255)
+  message   String        @db.Text
+  status    InquiryStatus @default(NEW)
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  @@index([status])
+  @@map("contact_inquiries")
+}
+
+model Notification {
+  id           String             @id @default(uuid()) @db.VarChar(36)
+  title        String             @db.VarChar(255)
+  message      String             @db.Text
+  type         NotificationType
+  targetType   NotificationTarget @map("target_type")
+  targetUserId String?            @map("target_user_id") @db.VarChar(36)
+  isRead       Boolean            @default(false) @map("is_read")
+  createdAt    DateTime           @default(now()) @map("created_at")
+
+  // Relations
+  targetUser   User?              @relation("UserNotifications", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@index([targetUserId])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.VarChar(36)
+  userId     String   @map("user_id") @db.VarChar(36)
+  action     String   @db.VarChar(100)
+  entityType String   @map("entity_type") @db.VarChar(100)
+  entityId   String   @map("entity_id") @db.VarChar(36)
+  oldValues  Json?    @map("old_values")
+  newValues  Json?    @map("new_values")
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  userAgent  String?  @map("user_agent") @db.VarChar(255)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
 
 model GymSetting {
   id          String   @id @default(uuid()) @db.VarChar(36)
@@ -527,7 +987,7 @@ model GymSetting {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relations
-  updater User? @relation("SettingUpdatedBy", fields: [updatedBy], references: [id])
+  updater     User?    @relation("SettingUpdatedBy", fields: [updatedBy], references: [id])
 
   @@map("gym_settings")
 }

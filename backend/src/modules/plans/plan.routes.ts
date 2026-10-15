@@ -1,9 +1,20 @@
 import { Router } from 'express';
 import { PlanController } from './plan.controller';
 import { authenticate } from '../../middleware/auth';
+import { authorize } from '../../middleware/authorize';
+import { UserRole } from '@prisma/client';
 
-export const planRoutes = Router();
+const router = Router();
 
-planRoutes.use(authenticate);
-planRoutes.get('/', PlanController.getPlans);
-planRoutes.get('/:id', PlanController.getPlanById);
+// Public / Authenticated read routes
+router.get('/', PlanController.getAll);
+router.get('/:id', PlanController.getById);
+
+// Admin restricted modifications
+router.post('/', authenticate, authorize(UserRole.ADMIN), PlanController.create);
+router.patch('/:id', authenticate, authorize(UserRole.ADMIN), PlanController.update);
+router.patch('/:id/toggle-active', authenticate, authorize(UserRole.ADMIN), PlanController.toggleActive);
+router.delete('/:id', authenticate, authorize(UserRole.ADMIN), PlanController.delete);
+
+export { router as planRoutes };
+export default router;

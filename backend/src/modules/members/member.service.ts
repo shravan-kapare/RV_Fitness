@@ -1,8 +1,9 @@
 import { prisma } from '../../config/database';
 import { NotFoundError, ConflictError } from '../../shared/errors';
 import { generateMemberCode } from '../../shared/numberGenerator';
-import { CreateMemberInput, UpdateMemberInput } from './member.schema';
+import { CreateMemberInput, UpdateMemberInput, MemberOnboardingInput } from './member.schema';
 import { AuditService } from '../billing/audit/audit.service';
+import { WorkoutEngineService } from '../fitness/workout-engine.service';
 
 export class MemberService {
   public static async findAll(filters: {
@@ -154,5 +155,169 @@ export class MemberService {
     });
 
     return updated;
+  }
+
+  public static async getMemberProfileByUserId(userId: string) {
+    const member = await prisma.member.findUnique({
+      where: { userId },
+      include: {
+        user: { select: { id: true, fullName: true, email: true, phone: true } },
+        memberships: {
+          where: { status: 'ACTIVE' },
+          include: { plan: true },
+          take: 1,
+        },
+        assessments: {
+          orderBy: { assessmentDate: 'desc' },
+          take: 5,
+        },
+        fitnessGoals: {
+          orderBy: { createdAt: 'desc' },
+          take: 3,
+        },
+        workoutPlans: {
+          where: { isActive: true },
+          take: 1,
+        },
+      },
+    });
+
+    if (!member) throw new NotFoundError('Member profile not found');
+    return member;
+  }
+
+  public static async getOnboardingStatus(userId: string) {
+    const member = await prisma.member.findUnique({
+      where: { userId },
+      include: {
+        assessments: { take: 1 },
+        fitnessGoals: { take: 1 },
+        user: { select: { fullName: true, email: true, phone: true } },
+      },
+    });
+
+    if (!member) {
+      return { completed: false, isMember: false };
+    }
+
+    const completed = member.onboardingCompleted || (
+      member.dateOfBirth !== null &&
+      member.assessments.length > 0 &&
+      member.fitnessGoals.length > 0
+    );
+
+    return {
+      completed,
+      isMember: true,
+      memberId: member.id,
+      memberCode: member.memberCode,
+      user: member.user,
+      profile: {
+        dateOfBirth: member.dateOfBirth,
+        gender: member.gender,
+        emergencyContact: member.emergencyContact,
+        address: member.address,
+      },
+    };
+  }
+
+  public static async completeOnboarding(userId: string, input: MemberOnboardingInput) {
+    const member = await prisma.member.findUnique({
+      where: { userId },
+      include: { user: true },
+    });
+
+    if (!member) throw new NotFoundError('Member profile not found for this account');
+
+    const heightM = input.heightCm / 100;
+    const bmi = Number((input.weightKg / (heightM * heightM)).toFixed(2));
+
+    const onboardingNotes = JSON.stringify({
+      experienceLevel: input.experienceLevel || 'BEGINNER',
+      daysPerWeek: input.daysPerWeek || 5,
+      dietaryPreference: input.dietaryPreference || 'Standard Balanced',
+      limitations: input.limitations || [],
+      parqAccepted: input.parqAccepted,
+      completedAt: new Date().toISOString(),
+    });
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedMember = await tx.member.update({
+        where: { id: member.id },
+        data: {
+          dateOfBirth: new Date(input.dateOfBirth),
+          gender: input.gender,
+          emergencyContact: input.emergencyContact.trim(),
+          address: input.address?.trim() || member.address,
+          notes: onboardingNotes,
+          onboardingCompleted: true,
+        },
+      });
+
+      if (input.phone) {
+        await tx.user.update({
+          where: { id: userId },
+          data: { phone: input.phone.trim() },
+        });
+      }
+
+      const assessment = await tx.fitnessAssessment.create({
+        data: {
+          memberId: member.id,
+          recordedBy: userId,
+          assessmentDate: new Date(),
+          weightKg: input.weightKg,
+          heightCm: input.heightCm,
+          bmi,
+          bodyFatPct: input.bodyFatPct,
+          chestCm: input.chestCm,
+          waistCm: input.waistCm,
+          armsCm: input.armsCm,
+          thighsCm: input.thighsCm,
+          notes: 'Initial Onboarding Baseline Assessment',
+        },
+      });
+
+      const goal = await tx.fitnessGoal.create({
+        data: {
+          memberId: member.id,
+          goalType: input.goalType,
+          targetValue: input.targetWeightKg ? `${input.targetWeightKg} kg` : undefined,
+          targetDate: input.targetDate ? new Date(input.targetDate) : undefined,
+          status: 'IN_PROGRESS',
+        },
+      });
+
+      return { updatedMember, assessment, goal };
+    });
+
+    // Automatically generate initial personalized routine with the workout engine
+    await WorkoutEngineService.generatePersonalizedPlan(member.id, {
+      goalType: input.goalType,
+      experienceLevel: input.experienceLevel,
+      daysPerWeek: input.daysPerWeek,
+      limitations: input.limitations,
+    });
+
+    await AuditService.log({
+      userId,
+      action: 'MEMBER_ONBOARDING_COMPLETED',
+      entityType: 'Member',
+      entityId: member.id,
+      newValues: {
+        goalType: input.goalType,
+        weightKg: input.weightKg,
+        heightCm: input.heightCm,
+        bmi,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Onboarding completed successfully! Your personalized workout protocol has been activated.',
+      member: result.updatedMember,
+      assessment: result.assessment,
+      goal: result.goal,
+    };
   }
 }
