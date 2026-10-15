@@ -14,8 +14,8 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       className={clsx(
-        'bg-[#111111] border border-[#292929] rounded-xl overflow-hidden text-[#F5F5F5]',
-        hoverLift && 'transition-all duration-200 hover:border-[#383838] hover:bg-[#141414]',
+        'bg-[#141418] border border-white/10 rounded-2xl overflow-hidden text-[#F5F5F5] shadow-lg',
+        hoverLift && 'transition-all duration-200 hover:border-white/20 hover:bg-[#18181F] hover:-translate-y-0.5',
         className
       )}
       {...props}
@@ -32,7 +32,7 @@ export const CardHeader: React.FC<HTMLAttributes<HTMLDivElement>> = ({
 }) => {
   return (
     <div
-      className={clsx('px-6 py-4 border-b border-[#222222] flex items-center justify-between', className)}
+      className={clsx('px-6 py-4 border-b border-white/10 flex items-center justify-between', className)}
       {...props}
     >
       {children}
@@ -61,7 +61,7 @@ export const CardDescription: React.FC<HTMLAttributes<HTMLParagraphElement>> = (
   ...props
 }) => {
   return (
-    <p className={clsx('text-xs text-[#A5A5A5] mt-0.5', className)} {...props}>
+    <p className={clsx('text-xs text-[#9CA3AF] mt-0.5', className)} {...props}>
       {children}
     </p>
   );
@@ -86,7 +86,7 @@ export const CardFooter: React.FC<HTMLAttributes<HTMLDivElement>> = ({
 }) => {
   return (
     <div
-      className={clsx('px-6 py-4 border-t border-[#222222] bg-[#0E0E0E]', className)}
+      className={clsx('px-6 py-4 border-t border-white/10 bg-[#101014]/40 flex items-center justify-between', className)}
       {...props}
     >
       {children}

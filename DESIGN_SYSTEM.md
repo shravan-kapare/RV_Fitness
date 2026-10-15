@@ -1,106 +1,131 @@
-# RV FITNESS — Visual Design System & Motion Specification
+# RV FITNESS — Unified Visual Design System & UI Specification
 
 **Facility:** RV Fitness, Narsobawadi, Maharashtra, India  
-**Brand Archetype:** High-performance dark-luxury commercial gym  
-**Visual Style:** Editorial, restrained, high-contrast, art-directed  
+**Brand Archetype:** High-performance, authentic strength-training sanctuary  
+**Visual Style:** Editorial, cinematic, image-led, restrained luxury, high-contrast  
 
 ---
 
 ## 1. Brand Tokens & Color Palette
 
-The RV Fitness color system establishes a focused, masculine, and authoritative gym atmosphere. It deliberately avoids generic SaaS blues, neon glows, or oversaturated borders.
+The RV Fitness color system establishes a focused, disciplined, and authentic gym environment. It deliberately avoids generic SaaS blues, excessive neon glows, and oversaturated borders.
 
 ```
-+-----------------------------------------------------------------------+
-|  CANVAS / BACKGROUNDS                                                |
-|  Near-Black:      #080808 (Deep application background)              |
-|  Deep Black:      #000000 (Pure contrast canvas & image backdrops)   |
-|  Secondary:       #111111 (Primary card containers, table headers)   |
-|  Elevated:        #171717 (Inputs, modals, floating panels)          |
-|  Surface Hover:   #1E1E1E (Row hover, dropdown item highlight)       |
-+-----------------------------------------------------------------------+
-|  DIVIDERS & BORDERS                                                   |
-|  Subtle Border:   #292929 (1px dividing lines, card outlines)        |
-|  Divider:         #1F1F1F (Internal row dividers)                    |
-+-----------------------------------------------------------------------+
-|  TYPOGRAPHY                                                           |
-|  Primary Text:    #F5F5F5 (Warm white for headlines, prices, titles) |
-|  Muted Text:      #A5A5A5 (Neutral secondary descriptions, labels)   |
-|  Subtle Text:     #737373 (Eyebrow text, line numbers, table footers)|
-+-----------------------------------------------------------------------+
-|  BRAND ACCENT (RESTRAINED GOLD / YELLOW)                              |
-|  Brand Gold:      #FFC21A (Primary CTAs, active nav, plan prices)    |
-|  Gold Hover:      #E6AC12 (Deeper gold for hovered active buttons)   |
-|  Gold Dark:       #D49D0E (Active pressed state)                     |
-|  Gold Light:      #FFD45E (Subtle badge accents, highlights)         |
-+-----------------------------------------------------------------------+
-|  SEMANTIC STATUS COLORS                                               |
-|  Success / Paid:  Emerald #34D399 (Paid dues, matched records)       |
-|  Warning / Due:   Amber #FBBF24 (Pending reviews, 1-30d aging)       |
-|  Critical / Error:Rose #F87171 (Overdue invoices, rejected refunds)  |
-+-----------------------------------------------------------------------+
++---------------------------------------------------------------------------------+
+|  CANVAS / BACKGROUNDS                                                           |
+|  Obsidian Canvas:  #080808 (Deep primary application background)                |
+|  Surface Base:     #0D0D10 / #111114 (Secondary background, dark section flow)  |
+|  Card / Container: #141418 (Cards, tables, modal bodies, dropdowns)             |
+|  Elevated Surface: #1A1A20 (Inputs, interactive hover rows, floating badges)    |
+|  Warm Light Canvas:#F5F4F0 / #FAF9F5 (Public editorial alternating light sections|
++---------------------------------------------------------------------------------+
+|  DIVIDERS & BORDERS                                                             |
+|  Dark Border:      #222226 / rgba(255, 255, 255, 0.08)                          |
+|  Light Border:     #E5E4E0 / #E0DED9 (For warm light public sections)           |
++---------------------------------------------------------------------------------+
+|  TYPOGRAPHY                                                                     |
+|  Dark Surface Text:#FFFFFF / #F5F5F5 (Headings, metric values, titles)          |
+|  Dark Muted Text:  #9CA3AF / #A5A5A5 (Secondary descriptions, field labels)     |
+|  Light Surface Text:#171717 (Headings, titles in warm-light sections)           |
+|  Light Muted Text: #525252 / #666666 (Body copy in warm-light sections)         |
++---------------------------------------------------------------------------------+
+|  BRAND ACCENT (RESTRAINED GOLD / AMBER)                                         |
+|  Brand Yellow:     #FFC21A (Primary CTAs, active nav items, key figures)        |
+|  Yellow Hover:     #E5AD16 (Hover state for primary buttons)                    |
+|  Yellow Glow:      rgba(255, 194, 26, 0.15) (Subtle button shadow)              |
+|  Amber Warm Accent:#B45309 (Pillars & eyebrow labels on warm-light sections)    |
++---------------------------------------------------------------------------------+
+|  SEMANTIC STATUS COLORS                                                         |
+|  Success / Active: #10B981 (Emerald: Paid dues, active membership, pass granted)|
+|  Warning / Due:    #F59E0B (Amber: Pending reviews, due invoices, expiring pass)|
+|  Danger / Overdue: #EF4444 (Rose/Red: Overdue accounts, rejected, error)       |
+|  Info / Token:     #3B82F6 (Blue: Information banners, audit logs)              |
++---------------------------------------------------------------------------------+
 ```
 
 ### The Restrained Yellow Rule
-Yellow (`#FFC21A`) is the high-energy RV Fitness brand accent. **It must never be used indiscriminately.**
-- **DO use `#FFC21A` for:** Primary "Join Now" and "Record Payment" action buttons, active navigation indicator pills, membership package pricing figures, and small branded details (e.g. the RV monogram).
-- **DO NOT use `#FFC21A` for:** Every icon, full card backgrounds, all borders, standard table headers, or normal text paragraphs. All standard containers must remain dark charcoal (`#111111` / `#171717`) with warm white text (`#F5F5F5`).
+Yellow (`#FFC21A`) is the high-energy RV Fitness brand accent.
+- **DO use `#FFC21A` for:** Primary "Explore Memberships", "Record Payment", and "Save" action buttons, active navigation indicator icons, pricing figures, and discrete verification badges.
+- **DO NOT use `#FFC21A` for:** Every icon, entire card backgrounds, excessive borders, standard table headers, or full paragraphs. Administrative and member interfaces maintain a clean dark charcoal base so information is readable without visual fatigue.
 
 ---
 
 ## 2. Typography & Numerical Alignment
 
 ### Hierarchy
-- **Editorial Hero Headlines:** `text-4xl sm:text-6xl font-black uppercase tracking-tight` (e.g. *"BUILD YOUR STRENGTH. DEFINE YOURSELF."*)
-- **Page Titles:** `text-xl sm:text-2xl font-black tracking-tight uppercase text-[#F5F5F5]`
-- **Section Headers:** `text-sm sm:text-base font-bold uppercase tracking-wider text-[#F5F5F5]`
-- **Eyebrow Tags:** `text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#FFC21A]`
-- **Body Text:** `text-sm text-[#A5A5A5] leading-relaxed`
+- **Hero Display:** `text-4xl sm:text-6xl lg:text-7xl font-black uppercase tracking-tight leading-[1.02]`
+- **Section Headlines:** `text-3xl sm:text-4xl font-black uppercase tracking-tight text-[#F5F5F5]`
+- **Administrative Page Titles:** `text-xl sm:text-2xl font-bold tracking-tight text-[#F5F5F5]` (avoid oversized decorative text on administrative workbenches)
+- **Card & Modal Titles:** `text-base sm:text-lg font-bold text-[#F5F5F5]`
+- **Eyebrow Tags:** `text-xs font-mono font-bold uppercase tracking-wider text-[#FFC21A]` (or `#B45309` on light surfaces)
+- **Body Text:** `text-sm text-[#A5A5A5] leading-relaxed font-normal`
+- **Data Labels:** `text-xs font-semibold uppercase tracking-wider text-[#9CA3AF]`
 
-### Tabular Numerals for Financial Data
-All monetary values, day counts, invoice numbers, and percentages **must** include the CSS class `tabular-nums font-mono`. This ensures that digits occupy identical horizontal widths, preventing jagged alignment across ledger columns.
-
----
-
-## 3. UI Component Specifications
-
-### 3.1 Buttons
-- **Primary:** `bg-[#FFC21A] hover:bg-[#E6AC12] text-[#080808] font-bold rounded-lg px-4 py-2.5 transition-all shadow-md`
-- **Secondary:** `bg-[#171717] hover:bg-[#1E1E1E] text-[#F5F5F5] border border-[#292929] rounded-lg px-4 py-2.5`
-- **Ghost:** `bg-transparent hover:bg-[#171717] text-[#A5A5A5] hover:text-[#F5F5F5] rounded-lg px-3 py-1.5`
-- **Danger:** `bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg`
-
-### 3.2 Cards & Elevated Surfaces
-- Default card background: `#111111` with a clean 1px border `#292929` and `rounded-xl`.
-- Subtle hover state: border shifts from `#292929` to `#3B3B3B` with `transform: translateY(-2px)`.
-- No loud drop shadows or glowing borders; elevation is achieved strictly through surface shade progression (`#080808` canvas $\rightarrow$ `#111111` card $\rightarrow$ `#171717` internal control).
-
-### 3.3 Tables
-- Table header row: `#141414` background with `#A5A5A5` text, uppercase, `text-[11px] font-semibold`.
-- Table body rows: divided by `#1F1F1F`. Row hover: `#171717` with smooth 150ms transition.
-- Numerical columns (amounts, dates, items) are right-aligned with `tabular-nums font-mono`.
+### Tabular Numerals for Financial & Biometric Data
+All numbers, rupee currency strings (`formatCurrency`), member codes (`RV-2026-XXXX`), dates, and workout sets/reps MUST utilize tabular figures:
+```css
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+```
 
 ---
 
-## 4. Gym-Focused Motion & Animation Specification
+## 3. Shared Component Specifications
 
-### 4.1 Public Website Animation Principles
-1. **Cinematic Hero Reveal:**
-   - Background gym photography smoothly fades in (`opacity: 0` $\rightarrow$ `1` over 800ms).
-   - The headline *"BUILD YOUR STRENGTH. DEFINE YOURSELF."* reveals with a staggered upward slide (`translateY(20px)` $\rightarrow$ `translateY(0)` with spring damping).
-2. **Subtle Light Sweep on Brand Mark:**
-   - A soft, linear metallic sheen sweeps across the RV Fitness gold mark on hover.
-3. **Scroll-Triggered Section Entrances:**
-   - As the user scrolls into view, components reveal sequentially with a 60ms stagger.
-4. **The Four Forces of Progress (Interactive Motion):**
-   - 4 pillars: *Discipline, Power, Recovery, Mindset*.
-   - Hovering each force illuminates its subtle gold accent line and displays an animated SVG glyph (barbell, pulse, shield, flame).
-5. **Membership Card Reveal:**
-   - Cards scale slightly ($1.00 \rightarrow 1.02$) on hover, highlighting the "Best Value" gold badge.
+### Buttons (`Button.tsx`)
+- **Primary:** `bg-[#FFC21A] text-black font-extrabold hover:bg-[#e5ad16] shadow-md shadow-[#FFC21A]/10 active:scale-[0.98] rounded-xl`
+- **Secondary:** `bg-[#141418] text-[#F5F5F5] border border-white/10 hover:bg-[#1E1E24] hover:border-white/20 active:scale-[0.98] rounded-xl`
+- **Danger:** `bg-rose-600/90 text-white font-semibold hover:bg-rose-500 rounded-xl`
+- **Ghost:** `text-[#9CA3AF] hover:text-[#F5F5F5] hover:bg-white/5 rounded-xl`
+- **Sizes:** `sm: text-xs px-3 py-1.5`, `md: text-sm px-4 py-2`, `lg: text-base px-6 py-3`
 
-### 4.2 Portal & Financial Workspace Motion
-- Fast, utilitarian, non-distracting.
-- Page transition: instant 150ms `fadeIn` (`opacity: 0; transform: translateY(4px)` $\rightarrow$ `opacity: 1; transform: translateY(0)`).
-- Modal backdrops: smooth `rgba(0,0,0,0.75)` fade-in.
-- Financial tables and payment inputs **must remain stable** and never bounce or slide during data entry.
-- **Accessibility:** Full `@media (prefers-reduced-motion: reduce)` compliance, suppressing animations for users who prefer reduced motion.
+### Cards & Surfaces (`Card.tsx`)
+- `bg-[#141418] border border-white/10 rounded-2xl overflow-hidden shadow-lg`
+- Header: `px-6 py-4 border-b border-white/10 flex items-center justify-between`
+- Body: `p-6`
+- Footer: `px-6 py-4 border-t border-white/10 bg-[#111114]/50`
+
+### Inputs & Form Fields (`Input.tsx`, `Select.tsx`)
+- `bg-[#16161A] border border-white/10 rounded-xl text-[#F5F5F5] text-sm px-3.5 py-2.5 focus:border-[#FFC21A] focus:ring-1 focus:ring-[#FFC21A]/20 transition-colors`
+- Labels: `block text-xs font-semibold uppercase tracking-wider text-[#9CA3AF] mb-1.5`
+
+### Tables (`Table.tsx`)
+- Header: `bg-[#191920] border-b border-white/10 text-xs font-semibold uppercase tracking-wider text-[#9CA3AF]`
+- Rows: `divide-y divide-white/5 text-xs text-[#E5E5E5]`
+- Interactive hover: `hover:bg-[#1E1E26] transition-colors`
+- Numbers & dates right-aligned with `tabular-nums font-mono`
+
+### Status Badges (`Badge.tsx`, `StatusBadge.tsx`)
+- Pill geometry: `px-2.5 py-0.5 rounded-full text-[11px] font-mono font-semibold uppercase tracking-wider border`
+- Success: `bg-emerald-500/10 text-emerald-400 border-emerald-500/20`
+- Warning: `bg-amber-500/10 text-amber-400 border-amber-500/20`
+- Danger: `bg-rose-500/10 text-rose-400 border-rose-500/20`
+- Neutral: `bg-white/5 text-[#A5A5A5] border-white/10`
+
+---
+
+## 4. Portal-Specific Layout Directives
+
+1. **Public Website:**
+   - Cinematic image-led hero sections with subtle parallax.
+   - Alternating dark (`#080808` / `#0D0D10`) and warm light (`#F5F4F0` / `#FAF9F5`) sections.
+   - Genuine gym photography representing real equipment and training areas.
+   - 100% database-driven pricing, trainers, events, and gallery items.
+
+2. **Admin Operations & Billing:**
+   - Compact `h-16` header with breadcrumbs and facility context.
+   - Dense, readable data tables with pagination and search debounce.
+   - Fast turnstile desk with large status notifications.
+   - Traceable PDF receipt downloads and financial adjustments.
+
+3. **Trainer Workspace:**
+   - Prominent athlete roster with direct links to workouts and diet builders.
+   - Modal-driven quick assessment loggers for biometrics (weight, BMI, body fat).
+   - Clear day-by-day split schedules.
+
+4. **Member Self-Service:**
+   - Immediate visibility into today's assigned workout or rest day.
+   - Membership expiry countdown badge.
+   - High-contrast digital turnstile QR pass for desk entry.
+   - Zero access to billing management of other members.
