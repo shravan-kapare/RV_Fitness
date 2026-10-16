@@ -115,10 +115,12 @@ export class AttendanceService {
 
     return {
       token: record.token,
+      qrPayload: record.token,
       expiresAt: record.expiresAt,
       memberCode: member.memberCode,
       hasActiveMembership: true,
       memberName: member.user.fullName,
+      planName: member.memberships[0]?.plan?.name || 'Active Membership',
     };
   }
 
@@ -398,5 +400,68 @@ export class AttendanceService {
       orderBy: { checkInTime: 'desc' },
       take: 30,
     });
+  }
+
+  /**
+   * Searchable attendance history for Admin and Trainer desks.
+   */
+  public static async searchHistory(filters: {
+    search?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const page = Math.max(1, filters.page || 1);
+    const limit = Math.min(100, Math.max(1, filters.limit || 20));
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (filters.dateFrom || filters.dateTo) {
+      where.date = {};
+      if (filters.dateFrom) where.date.gte = new Date(filters.dateFrom);
+      if (filters.dateTo) where.date.lte = new Date(filters.dateTo);
+    }
+    if (filters.search && filters.search.trim()) {
+      const q = filters.search.trim();
+      where.OR = [
+        { member: { memberCode: { contains: q } } },
+        { member: { user: { fullName: { contains: q } } } },
+        { member: { user: { phone: { contains: q } } } },
+      ];
+    }
+
+    const [total, records] = await Promise.all([
+      prisma.attendance.count({ where }),
+      prisma.attendance.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { checkInTime: 'desc' },
+        include: {
+          member: {
+            include: {
+              user: { select: { fullName: true, email: true, phone: true } },
+              memberships: {
+                where: { status: 'ACTIVE' },
+                select: { plan: { select: { name: true } } },
+                take: 1,
+              },
+            },
+          },
+          verifier: { select: { fullName: true } },
+        },
+      }),
+    ]);
+
+    return {
+      records,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }

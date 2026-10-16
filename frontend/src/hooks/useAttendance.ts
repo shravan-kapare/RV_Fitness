@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { ApiResponse, Attendance, AttendanceQrToken } from '@/types';
+import { ApiResponse, Attendance, AttendanceQrToken, PaginatedResponse } from '@/types';
 import toast from 'react-hot-toast';
 
 export const useMemberQrToken = () => {
@@ -43,6 +43,24 @@ export const useDailyAttendance = (date?: string) => {
   });
 };
 
+export const useAttendanceHistory = (filters: {
+  search?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  limit?: number;
+} = {}) => {
+  return useQuery({
+    queryKey: ['attendance-history', filters],
+    queryFn: async () => {
+      const { data } = await api.get<PaginatedResponse<Attendance>>('/attendance/history', {
+        params: filters,
+      });
+      return data;
+    },
+  });
+};
+
 export const useScanQrAttendance = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -53,6 +71,7 @@ export const useScanQrAttendance = () => {
     onSuccess: (data) => {
       toast.success(data.message || 'Check-in verified successfully!');
       queryClient.invalidateQueries({ queryKey: ['daily-attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-history'] });
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error?.message || err.response?.data?.message || 'Invalid or expired QR pass');
@@ -70,6 +89,7 @@ export const useManualCheckIn = () => {
     onSuccess: (data) => {
       toast.success(data.message || 'Check-in recorded successfully!');
       queryClient.invalidateQueries({ queryKey: ['daily-attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['attendance-history'] });
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.error?.message || err.response?.data?.message || 'Failed to record check-in');

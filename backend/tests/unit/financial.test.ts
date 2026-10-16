@@ -58,7 +58,9 @@ describe('Financial Arithmetic & Minor Units (Paisa)', () => {
   it('converts amounts to English words (INR) for receipts', () => {
     expect(amountInWords(200000n)).toBe('Two Thousand Rupees Only');
     expect(amountInWords(1534000n)).toBe('Fifteen Thousand Three Hundred and Forty Rupees Only');
-    expect(amountInWords(0n)).toBe('Zero Rupees Only');
-    expect(amountInWords(5050n)).toBe('Fifty Rupees and Fifty Paisa Only');
+    expect(amountInWords(5050n)).toBe('Fifty Rupees and Fifty Paise Only');
+    expect(amountInWords(5001n)).toBe('Fifty Rupees and One Paisa Only');
+    expect(amountInWords(75n)).toBe('Seventy Five Paise Only');
+    expect(amountInWords(1n)).toBe('One Paisa Only');
   });
 });

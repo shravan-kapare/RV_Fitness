@@ -10,8 +10,9 @@ export class ReceiptController {
       const memberId = req.query.memberId as string | undefined;
       const dateFrom = req.query.dateFrom as string | undefined;
       const dateTo = req.query.dateTo as string | undefined;
+      const search = req.query.search as string | undefined;
 
-      const result = await ReceiptService.findAll({ page, limit, memberId, dateFrom, dateTo }, req.user);
+      const result = await ReceiptService.findAll({ page, limit, memberId, dateFrom, dateTo, search }, req.user);
 
       res.status(200).json({
         success: true,
@@ -42,12 +43,16 @@ export class ReceiptController {
       const pdfBuffer = await ReceiptService.generatePdfBuffer(id, req.user);
       const receipt = await ReceiptService.findById(id, req.user);
 
+      const dispositionType = req.query.inline === 'true' ? 'inline' : 'attachment';
+
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader(
         'Content-Disposition',
-        `attachment; filename="Receipt-${receipt.receiptNumber}.pdf"`
+        `${dispositionType}; filename="Receipt-${receipt.receiptNumber}.pdf"`
       );
-      res.send(pdfBuffer);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+      res.end(pdfBuffer);
     } catch (error) {
       next(error);
     }

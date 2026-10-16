@@ -1,5 +1,5 @@
 import { prisma } from '../../../config/database';
-import { UserRole } from '@prisma/client';
+import { UserRole, PaymentStatus } from '@prisma/client';
 import { NotFoundError, ForbiddenError } from '../../../shared/errors';
 import { formatCurrency, amountInWords } from '../../../shared/financial';
 import { SettingsService } from '../settings/settings.service';
@@ -8,15 +8,44 @@ import PDFDocument from 'pdfkit';
 export class ReceiptService {
   public static serializeReceipt(receipt: any): any {
     if (!receipt) return receipt;
+
+    const amountPaisa = Number(receipt.amountPaisa);
+    const prevPaidPaisa = receipt.previousPaymentsPaisa !== undefined ? Number(receipt.previousPaymentsPaisa) : 0;
+    const remBalancePaisa = receipt.remainingBalancePaisa !== undefined ? Number(receipt.remainingBalancePaisa) : 0;
+    const invTotalPaisa = receipt.invoice?.totalPaisa !== undefined ? Number(receipt.invoice.totalPaisa) : amountPaisa;
+
     return {
       ...receipt,
-      amountPaisa: Number(receipt.amountPaisa),
+      amountPaisa,
       formattedAmount: formatCurrency(receipt.amountPaisa),
       amountWords: amountInWords(receipt.amountPaisa),
+      previousPaymentsPaisa: prevPaidPaisa,
+      formattedPreviousPayments: formatCurrency(prevPaidPaisa),
+      remainingBalancePaisa: remBalancePaisa,
+      formattedRemainingBalance: formatCurrency(remBalancePaisa),
+      invoiceTotalPaisa: invTotalPaisa,
+      formattedInvoiceTotal: formatCurrency(invTotalPaisa),
       payment: receipt.payment
         ? {
             ...receipt.payment,
             amountPaisa: Number(receipt.payment.amountPaisa),
+          }
+        : undefined,
+      invoice: receipt.invoice
+        ? {
+            ...receipt.invoice,
+            subtotalPaisa: Number(receipt.invoice.subtotalPaisa),
+            taxPaisa: Number(receipt.invoice.taxPaisa),
+            discountPaisa: Number(receipt.invoice.discountPaisa),
+            totalPaisa: Number(receipt.invoice.totalPaisa),
+            paidPaisa: Number(receipt.invoice.paidPaisa),
+            items: receipt.invoice.items?.map((item: any) => ({
+              ...item,
+              unitPricePaisa: Number(item.unitPricePaisa),
+              taxPaisa: Number(item.taxPaisa),
+              discountPaisa: Number(item.discountPaisa),
+              totalPaisa: Number(item.totalPaisa),
+            })),
           }
         : undefined,
     };
@@ -28,10 +57,23 @@ export class ReceiptService {
       include: {
         payment: true,
         invoice: {
-          include: { items: true },
+          include: {
+            items: true,
+            payments: {
+              where: { status: PaymentStatus.CONFIRMED },
+              orderBy: { paymentDate: 'asc' },
+            },
+          },
         },
         member: {
-          include: { user: { select: { fullName: true, email: true, phone: true } } },
+          include: {
+            user: { select: { fullName: true, email: true, phone: true } },
+            memberships: {
+              include: { plan: true },
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+            },
+          },
         },
         issuer: { select: { fullName: true } },
       },
@@ -47,7 +89,48 @@ export class ReceiptService {
       throw new ForbiddenError('You can only access your own payment receipts');
     }
 
-    return this.serializeReceipt(receipt);
+    // Compute previous payments made on this invoice prior to this receipt
+    const allConfirmedPayments = receipt.invoice?.payments || [];
+    const thisPaymentTime = new Date(receipt.payment?.paymentDate || receipt.issuedAt).getTime();
+
+    let previousPaymentsPaisa = 0n;
+    for (const p of allConfirmedPayments) {
+      if (p.id !== receipt.paymentId) {
+        const pTime = new Date(p.paymentDate).getTime();
+        if (pTime < thisPaymentTime || (pTime === thisPaymentTime && p.id < receipt.paymentId)) {
+          previousPaymentsPaisa += p.amountPaisa;
+        }
+      }
+    }
+
+    const currentPaymentPaisa = receipt.amountPaisa;
+    const cumulativePaidPaisa = previousPaymentsPaisa + currentPaymentPaisa;
+    const invoiceTotalPaisa = receipt.invoice?.totalPaisa || currentPaymentPaisa;
+    const remainingBalancePaisa =
+      invoiceTotalPaisa > cumulativePaidPaisa ? invoiceTotalPaisa - cumulativePaidPaisa : 0n;
+
+    const latestMembership = receipt.member.memberships?.[0];
+
+    const extendedData = {
+      ...receipt,
+      previousPaymentsPaisa,
+      currentPaymentPaisa,
+      cumulativePaidPaisa,
+      remainingBalancePaisa,
+      membership: latestMembership
+        ? {
+            planName:
+              latestMembership.plan?.name ||
+              (latestMembership.planSnapshot as any)?.name ||
+              'Gym Membership',
+            startDate: latestMembership.startDate,
+            endDate: latestMembership.endDate,
+            status: latestMembership.status,
+          }
+        : null,
+    };
+
+    return this.serializeReceipt(extendedData);
   }
 
   public static async findAll(
@@ -57,6 +140,7 @@ export class ReceiptService {
       memberId?: string;
       dateFrom?: string;
       dateTo?: string;
+      search?: string;
     },
     user?: { id: string; role: UserRole }
   ) {
@@ -82,6 +166,15 @@ export class ReceiptService {
       if (filters.dateTo) where.issuedAt.lte = new Date(filters.dateTo);
     }
 
+    if (filters.search) {
+      where.OR = [
+        { receiptNumber: { contains: filters.search } },
+        { invoice: { invoiceNumber: { contains: filters.search } } },
+        { member: { memberCode: { contains: filters.search } } },
+        { member: { user: { fullName: { contains: filters.search } } } },
+      ];
+    }
+
     const [total, receipts] = await Promise.all([
       prisma.receipt.count({ where }),
       prisma.receipt.findMany({
@@ -91,7 +184,7 @@ export class ReceiptService {
         orderBy: { issuedAt: 'desc' },
         include: {
           payment: { select: { method: true, referenceNumber: true, paymentDate: true } },
-          invoice: { select: { invoiceNumber: true } },
+          invoice: { select: { invoiceNumber: true, totalPaisa: true } },
           member: { include: { user: { select: { fullName: true } } } },
         },
       }),
@@ -109,166 +202,384 @@ export class ReceiptService {
   }
 
   /**
-   * Generates a branded, printable PDF document for the receipt using PDFKit.
+   * Generates a professional, authoritative A4 portrait payment receipt PDF document.
    */
   public static async generatePdfBuffer(id: string, user?: { id: string; role: UserRole }): Promise<Buffer> {
     const receipt = await this.findById(id, user);
     const settings = await SettingsService.getAll();
 
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ size: 'A4', margin: 40 });
-      const buffers: Buffer[] = [];
+      // Standard A4: 595.28 x 841.89 points
+      const doc = new PDFDocument({
+        size: 'A4',
+        margins: { top: 36, bottom: 36, left: 40, right: 40 },
+        info: {
+          Title: `Payment Receipt — ${receipt.receiptNumber}`,
+          Author: 'RV Fitness Narsobawadi',
+          Subject: 'Official Payment Receipt',
+          Keywords: 'Receipt, Payment, RV Fitness, Gym, Narsobawadi',
+        },
+      });
 
+      const buffers: Buffer[] = [];
       doc.on('data', buffers.push.bind(buffers));
       doc.on('end', () => resolve(Buffer.concat(buffers)));
       doc.on('error', reject);
 
-      // Colors
-      const primaryGold = '#D97706';
-      const textDark = '#111827';
-      const textMuted = '#4B5563';
-      const surfaceLight = '#F3F4F6';
+      // Design Palette
+      const brandDark = '#111114';
+      const brandGold = '#B45309';
+      const accentYellow = '#FFC21A';
+      const textPrimary = '#111827';
+      const textSecondary = '#4B5563';
+      const borderStroke = '#E5E7EB';
+      const bgSubtle = '#F9FAFB';
 
-      // Header Banner
-      doc.rect(40, 40, 515, 75).fill('#1A1A1A');
+      const leftMargin = 40;
+      const pageWidth = 515; // 595.28 - 80
 
-      // Title & Gym Branding
+      // 1. Top Decorative Brand Bar
+      doc.rect(leftMargin, 36, pageWidth, 5).fill(accentYellow);
+
+      // 2. Header Container
+      let currentY = 52;
+
+      // Brand Logo Monogram (Vector Badge)
+      doc.roundedRect(leftMargin, currentY, 44, 44, 6).fill(brandDark);
+      doc.rect(leftMargin, currentY + 40, 44, 4).fill(accentYellow);
       doc
-        .fillColor(primaryGold)
-        .fontSize(22)
         .font('Helvetica-Bold')
-        .text('RV FITNESS', 55, 52, { continued: false });
-
-      doc
+        .fontSize(18)
         .fillColor('#FFFFFF')
-        .fontSize(9)
-        .font('Helvetica')
-        .text(settings.gym_address || 'Narsobawadi, Maharashtra, India', 55, 78)
-        .text(`Phone: ${settings.gym_phone || '+91 98765 43210'} | GSTIN: ${settings.gym_gstin || 'N/A'}`, 55, 92);
+        .text('RV', leftMargin, currentY + 11, { width: 44, align: 'center' });
 
-      // Receipt Badge on the right
+      // Gym Legal Entity Details
+      const gymName = settings.gym_name || 'RV FITNESS';
+      const gymAddress =
+        settings.gym_address ||
+        'Near Datta Mandir, Main Road, Narsobawadi, Taluka Shirol, Kolhapur, Maharashtra 416104';
+      const gymPhone = settings.gym_phone || '+91 98765 43210';
+      const gymEmail = settings.gym_email || 'info@rvfitness.com';
+
+      const rawGstin = settings.gym_gstin?.trim() || '';
+      const isGstConfigured =
+        rawGstin.length >= 10 &&
+        rawGstin.toUpperCase() !== 'N/A' &&
+        rawGstin !== '27AAAAA0000A1Z5';
+
       doc
-        .fillColor(primaryGold)
+        .font('Helvetica-Bold')
         .fontSize(16)
-        .font('Helvetica-Bold')
-        .text('PAYMENT RECEIPT', 380, 55, { align: 'right' });
+        .fillColor(brandDark)
+        .text(gymName.toUpperCase(), leftMargin + 54, currentY + 2);
 
       doc
-        .fillColor('#E5E7EB')
-        .fontSize(10)
-        .font('Helvetica')
-        .text(`Receipt #: ${receipt.receiptNumber}`, 380, 78, { align: 'right' })
-        .text(`Date: ${new Date(receipt.issuedAt).toLocaleDateString('en-IN')}`, 380, 92, { align: 'right' });
-
-      // Receipt Details Section
-      doc.moveDown(4);
-      const topY = 135;
-
-      // Member Info Box
-      doc.rect(40, topY, 250, 85).fillAndStroke(surfaceLight, '#E5E7EB');
-      doc
-        .fillColor(textDark)
-        .fontSize(10)
         .font('Helvetica-Bold')
-        .text('RECEIVED FROM:', 50, topY + 10);
+        .fontSize(7.5)
+        .fillColor(brandGold)
+        .text('STRENGTH & CONDITIONING CLUB', leftMargin + 54, currentY + 20);
 
       doc
         .font('Helvetica')
+        .fontSize(8)
+        .fillColor(textSecondary)
+        .text(gymAddress, leftMargin + 54, currentY + 31, { width: 230 });
+
+      let contactLine = `Phone: ${gymPhone}  |  Email: ${gymEmail}`;
+      if (isGstConfigured) {
+        contactLine += `  |  GSTIN: ${rawGstin}`;
+      }
+      doc.text(contactLine, leftMargin + 54, currentY + 52, { width: 270 });
+
+      // Right Header Block: Document Badge & Metadata
+      const rightColX = 330;
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(15)
+        .fillColor(brandDark)
+        .text('PAYMENT RECEIPT', rightColX, currentY + 2, { align: 'right', width: pageWidth - (rightColX - leftMargin) });
+
+      doc
+        .font('Helvetica-Bold')
         .fontSize(9)
-        .fillColor(textMuted)
-        .text(`Name: ${receipt.member.user.fullName}`, 50, topY + 28)
-        .text(`Member Code: ${receipt.member.memberCode}`, 50, topY + 42)
-        .text(`Phone: ${receipt.member.user.phone || 'N/A'}`, 50, topY + 56)
-        .text(`Email: ${receipt.member.user.email}`, 50, topY + 70);
+        .fillColor(brandGold)
+        .text(`Receipt #: ${receipt.receiptNumber}`, rightColX, currentY + 20, { align: 'right', width: pageWidth - (rightColX - leftMargin) });
 
-      // Payment Details Box
-      doc.rect(305, topY, 250, 85).fillAndStroke(surfaceLight, '#E5E7EB');
-      doc
-        .fillColor(textDark)
-        .fontSize(10)
-        .font('Helvetica-Bold')
-        .text('PAYMENT METRICS:', 315, topY + 10);
+      const issueDateStr = new Date(receipt.issuedAt).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+      const issueTimeStr = new Date(receipt.issuedAt).toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
 
       doc
         .font('Helvetica')
-        .fontSize(9)
-        .fillColor(textMuted)
-        .text(`Invoice Ref: ${receipt.invoice.invoiceNumber}`, 315, topY + 28)
-        .text(`Payment Method: ${receipt.payment.method}`, 315, topY + 42)
-        .text(`Txn Ref: ${receipt.payment.referenceNumber || 'N/A'}`, 315, topY + 56)
-        .text(`Issued By: ${receipt.issuer?.fullName || 'Staff'}`, 315, topY + 70);
-
-      // Payment Amount Highlight Banner
-      const amountY = 240;
-      doc.rect(40, amountY, 515, 60).fill('#FEF3C7');
-      doc.rect(40, amountY, 515, 60).stroke(primaryGold);
-
-      doc
-        .fillColor('#92400E')
-        .fontSize(11)
-        .font('Helvetica-Bold')
-        .text('AMOUNT RECEIVED', 55, amountY + 12);
-
-      doc
-        .fillColor('#B45309')
-        .fontSize(22)
-        .font('Helvetica-Bold')
-        .text(formatCurrency(receipt.amountPaisa), 55, amountY + 28);
-
-      // Amount in Words
-      doc.moveDown(5);
-      const wordsY = 320;
-      doc
-        .fillColor(textDark)
-        .fontSize(9)
-        .font('Helvetica-Bold')
-        .text('Amount in Words: ', 45, wordsY, { continued: true })
-        .font('Helvetica')
-        .fillColor(textMuted)
-        .text(amountInWords(receipt.amountPaisa));
+        .fontSize(8)
+        .fillColor(textSecondary)
+        .text(`Issued: ${issueDateStr}, ${issueTimeStr}`, rightColX, currentY + 33, { align: 'right', width: pageWidth - (rightColX - leftMargin) })
+        .text('ORIGINAL FOR RECIPIENT', rightColX, currentY + 45, { align: 'right', width: pageWidth - (rightColX - leftMargin) });
 
       // Divider Line
-      doc.moveTo(40, 350).lineTo(555, 350).stroke('#D1D5DB');
+      currentY = 125;
+      doc.moveTo(leftMargin, currentY).lineTo(leftMargin + pageWidth, currentY).lineWidth(0.75).stroke(borderStroke);
 
-      // Notes & Terms
-      doc.moveDown(2);
-      const notesY = 370;
-      doc
-        .fillColor(textDark)
-        .fontSize(8)
-        .font('Helvetica-Bold')
-        .text('Terms & Conditions:', 45, notesY);
+      // 3. Member & Transaction Detail Two-Column Cards
+      currentY += 12;
+      const cardWidth = 248;
+      const cardHeight = 98;
 
-      doc
-        .font('Helvetica')
-        .fontSize(8)
-        .fillColor(textMuted)
-        .text('1. This receipt is computer generated and valid for all gym admission records.', 45, notesY + 15)
-        .text('2. Membership subscriptions are subject to the agreed terms of RV Fitness, Narsobawadi.', 45, notesY + 28)
-        .text('3. For any discrepancies, please present this original receipt within 7 business days.', 45, notesY + 41);
-
-      // Signatory Section
-      const signY = 460;
-      doc.moveTo(380, signY).lineTo(530, signY).stroke('#9CA3AF');
+      // Card 1: Received From (Member)
+      doc.roundedRect(leftMargin, currentY, cardWidth, cardHeight, 6).fillAndStroke(bgSubtle, borderStroke);
       doc
         .font('Helvetica-Bold')
-        .fontSize(9)
-        .fillColor(textDark)
-        .text('Authorized Signatory', 380, signY + 6, { align: 'center', width: 150 });
-      doc
-        .font('Helvetica')
-        .fontSize(8)
-        .fillColor(textMuted)
-        .text('RV Fitness, Narsobawadi', 380, signY + 18, { align: 'center', width: 150 });
+        .fontSize(8.5)
+        .fillColor(brandDark)
+        .text('RECEIVED FROM', leftMargin + 12, currentY + 10);
 
-      // Footer
+      doc.rect(leftMargin + 12, currentY + 21, 24, 1.5).fill(accentYellow);
+
       doc
-        .fontSize(7)
-        .fillColor('#9CA3AF')
-        .text('Official Billing Document — Generated by RV Fitness Management System', 40, 550, {
-          align: 'center',
-          width: 515,
+        .font('Helvetica-Bold')
+        .fontSize(10)
+        .fillColor(textPrimary)
+        .text(receipt.member?.user?.fullName || 'Valued Member', leftMargin + 12, currentY + 28);
+
+      let memberDetailY = currentY + 44;
+      doc.font('Helvetica').fontSize(8).fillColor(textSecondary);
+      doc.text(`Member ID: ${receipt.member?.memberCode || 'N/A'}`, leftMargin + 12, memberDetailY);
+
+      if (receipt.member?.user?.phone) {
+        memberDetailY += 13;
+        doc.text(`Phone: ${receipt.member.user.phone}`, leftMargin + 12, memberDetailY);
+      }
+      if (receipt.member?.user?.email) {
+        memberDetailY += 13;
+        doc.text(`Email: ${receipt.member.user.email}`, leftMargin + 12, memberDetailY, { width: cardWidth - 24, ellipsis: true });
+      }
+
+      // Card 2: Transaction Details
+      const card2X = leftMargin + cardWidth + 19;
+      doc.roundedRect(card2X, currentY, cardWidth, cardHeight, 6).fillAndStroke(bgSubtle, borderStroke);
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(8.5)
+        .fillColor(brandDark)
+        .text('TRANSACTION DETAILS', card2X + 12, currentY + 10);
+
+      doc.rect(card2X + 12, currentY + 21, 24, 1.5).fill(accentYellow);
+
+      let txnDetailY = currentY + 28;
+      const paymentDateFormatted = new Date(receipt.payment?.paymentDate || receipt.issuedAt).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+
+      doc.font('Helvetica').fontSize(8).fillColor(textSecondary);
+      doc.text('Payment Voucher:', card2X + 12, txnDetailY);
+      doc.font('Helvetica-Bold').fillColor(textPrimary).text(receipt.payment?.paymentNumber || 'Auto-Allocated', card2X + 90, txnDetailY);
+
+      txnDetailY += 13;
+      doc.font('Helvetica').fillColor(textSecondary).text('Payment Date:', card2X + 12, txnDetailY);
+      doc.font('Helvetica-Bold').fillColor(textPrimary).text(paymentDateFormatted, card2X + 90, txnDetailY);
+
+      txnDetailY += 13;
+      doc.font('Helvetica').fillColor(textSecondary).text('Payment Method:', card2X + 12, txnDetailY);
+      doc.font('Helvetica-Bold').fillColor(textPrimary).text(String(receipt.payment?.method || 'CASH').replace(/_/g, ' '), card2X + 90, txnDetailY);
+
+      if (receipt.payment?.referenceNumber) {
+        txnDetailY += 13;
+        doc.font('Helvetica').fillColor(textSecondary).text('Txn / UTR Ref:', card2X + 12, txnDetailY);
+        doc.font('Helvetica-Bold').fillColor(textPrimary).text(receipt.payment.referenceNumber, card2X + 90, txnDetailY, { width: 145, ellipsis: true });
+      }
+
+      txnDetailY += 13;
+      doc.font('Helvetica').fillColor(textSecondary).text('Associated Invoice:', card2X + 12, txnDetailY);
+      doc.font('Helvetica-Bold').fillColor(brandGold).text(receipt.invoice?.invoiceNumber || 'Direct Payment', card2X + 90, txnDetailY);
+
+      // 4. Line Items / Service Description Table
+      currentY += cardHeight + 16;
+
+      // Table Header
+      doc.rect(leftMargin, currentY, pageWidth, 20).fill(brandDark);
+      doc.font('Helvetica-Bold').fontSize(8).fillColor('#FFFFFF');
+      doc.text('ITEM / SERVICE DESCRIPTION', leftMargin + 10, currentY + 6);
+      doc.text('QTY', leftMargin + 270, currentY + 6, { width: 40, align: 'center' });
+      doc.text('UNIT PRICE', leftMargin + 320, currentY + 6, { width: 60, align: 'right' });
+      doc.text('TAX', leftMargin + 390, currentY + 6, { width: 45, align: 'right' });
+      doc.text('NET AMOUNT', leftMargin + 440, currentY + 6, { width: 65, align: 'right' });
+
+      currentY += 20;
+
+      const items = receipt.invoice?.items || [];
+      if (items.length > 0) {
+        items.forEach((item: any, idx: number) => {
+          const rowBg = idx % 2 === 0 ? '#FFFFFF' : bgSubtle;
+          doc.rect(leftMargin, currentY, pageWidth, 24).fillAndStroke(rowBg, borderStroke);
+
+          doc.font('Helvetica-Bold').fontSize(8).fillColor(textPrimary);
+          doc.text(item.description, leftMargin + 10, currentY + 7, { width: 250, ellipsis: true });
+
+          doc.font('Helvetica').fontSize(8).fillColor(textSecondary);
+          doc.text(String(item.quantity || 1), leftMargin + 270, currentY + 7, { width: 40, align: 'center' });
+          doc.text(formatCurrency(item.unitPricePaisa), leftMargin + 320, currentY + 7, { width: 60, align: 'right' });
+
+          const taxDisplay = item.taxRateBps && item.taxRateBps > 0 && isGstConfigured
+            ? `${item.taxRateBps / 100}%`
+            : '0%';
+          doc.text(taxDisplay, leftMargin + 390, currentY + 7, { width: 45, align: 'right' });
+          doc.font('Helvetica-Bold').fillColor(textPrimary).text(formatCurrency(item.totalPaisa), leftMargin + 440, currentY + 7, { width: 65, align: 'right' });
+
+          currentY += 24;
         });
+      } else {
+        // Fallback row for payment against subscription
+        doc.rect(leftMargin, currentY, pageWidth, 24).fillAndStroke('#FFFFFF', borderStroke);
+        doc.font('Helvetica-Bold').fontSize(8).fillColor(textPrimary);
+        doc.text(
+          receipt.membership?.planName
+            ? `Gym Membership Subscription — ${receipt.membership.planName}`
+            : 'Gym Membership Subscription & Facility Access',
+          leftMargin + 10,
+          currentY + 7
+        );
+        doc.font('Helvetica').fontSize(8).fillColor(textSecondary);
+        doc.text('1', leftMargin + 270, currentY + 7, { width: 40, align: 'center' });
+        doc.text(formatCurrency(receipt.amountPaisa), leftMargin + 320, currentY + 7, { width: 60, align: 'right' });
+        doc.text('0%', leftMargin + 390, currentY + 7, { width: 45, align: 'right' });
+        doc.font('Helvetica-Bold').fillColor(textPrimary).text(formatCurrency(receipt.amountPaisa), leftMargin + 440, currentY + 7, { width: 65, align: 'right' });
+        currentY += 24;
+      }
+
+      // 5. Financial Ledger Box (Right-aligned) & Membership Note (Left)
+      currentY += 12;
+      const ledgerBoxWidth = 220;
+      const ledgerBoxX = leftMargin + pageWidth - ledgerBoxWidth;
+
+      // Left Box: Membership Coverage / Notes
+      const noteBoxWidth = 275;
+      doc.roundedRect(leftMargin, currentY, noteBoxWidth, 102, 6).fillAndStroke(bgSubtle, borderStroke);
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(8)
+        .fillColor(brandDark)
+        .text('MEMBERSHIP & ALLOCATION SUMMARY', leftMargin + 12, currentY + 10);
+
+      doc.font('Helvetica').fontSize(7.5).fillColor(textSecondary);
+      let noteY = currentY + 26;
+
+      if (receipt.membership) {
+        doc.text(`Active Plan: ${receipt.membership.planName}`, leftMargin + 12, noteY);
+        noteY += 12;
+        if (receipt.membership.startDate && receipt.membership.endDate) {
+          const sDate = new Date(receipt.membership.startDate).toLocaleDateString('en-IN');
+          const eDate = new Date(receipt.membership.endDate).toLocaleDateString('en-IN');
+          doc.text(`Membership Period: ${sDate} to ${eDate}`, leftMargin + 12, noteY);
+          noteY += 12;
+        }
+      }
+
+      doc.text(`Recorded By: ${receipt.issuer?.fullName || 'Staff Cashier'}`, leftMargin + 12, noteY);
+      noteY += 12;
+      doc.text(`Payment Status: ${receipt.payment?.status || 'CONFIRMED'}`, leftMargin + 12, noteY);
+      noteY += 12;
+      doc.text(
+        isGstConfigured
+          ? 'GST Registration: Registered Dealer in Maharashtra.'
+          : 'Tax Treatment: Composition / Unregistered Gym Operator (No Tax Credit).',
+        leftMargin + 12,
+        noteY,
+        { width: noteBoxWidth - 24 }
+      );
+
+      // Right Box: Balances & Amount Paid
+      doc.roundedRect(ledgerBoxX, currentY, ledgerBoxWidth, 102, 6).fillAndStroke('#FFFFFF', borderStroke);
+
+      let ledgerY = currentY + 10;
+      doc.font('Helvetica').fontSize(8).fillColor(textSecondary).text('Total Invoice Amount:', ledgerBoxX + 12, ledgerY);
+      doc.font('Helvetica-Bold').fillColor(textPrimary).text(receipt.formattedInvoiceTotal, ledgerBoxX + 120, ledgerY, { width: 88, align: 'right' });
+
+      ledgerY += 14;
+      doc.font('Helvetica').fillColor(textSecondary).text('Previous Payments:', ledgerBoxX + 12, ledgerY);
+      doc.font('Helvetica').fillColor(textPrimary).text(receipt.formattedPreviousPayments, ledgerBoxX + 120, ledgerY, { width: 88, align: 'right' });
+
+      // Prominent Received Amount Banner
+      ledgerY += 15;
+      doc.roundedRect(ledgerBoxX + 8, ledgerY, ledgerBoxWidth - 16, 32, 4).fillAndStroke('#FEF3C7', brandGold);
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(8)
+        .fillColor(brandGold)
+        .text('CURRENT PAYMENT RECEIVED', ledgerBoxX + 14, ledgerY + 4);
+
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(13)
+        .fillColor('#78350F')
+        .text(receipt.formattedAmount, ledgerBoxX + 14, ledgerY + 15, { width: ledgerBoxWidth - 28, align: 'right' });
+
+      ledgerY += 38;
+      doc.font('Helvetica-Bold').fontSize(8.5).fillColor(textSecondary).text('Remaining Balance Due:', ledgerBoxX + 12, ledgerY);
+      doc.font('Helvetica-Bold').fontSize(8.5).fillColor(receipt.remainingBalancePaisa > 0 ? '#DC2626' : '#059669').text(
+        receipt.formattedRemainingBalance,
+        ledgerBoxX + 120,
+        ledgerY,
+        { width: 88, align: 'right' }
+      );
+
+      // 6. Amount in Words Banner
+      currentY += 114;
+      doc.roundedRect(leftMargin, currentY, pageWidth, 28, 5).fillAndStroke(bgSubtle, borderStroke);
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(8)
+        .fillColor(brandDark)
+        .text('AMOUNT IN WORDS: ', leftMargin + 10, currentY + 9, { continued: true })
+        .font('Helvetica')
+        .fillColor(textSecondary)
+        .text(receipt.amountWords);
+
+      // 7. Terms & Authorized Signatory Block
+      currentY += 38;
+
+      // Terms
+      doc.font('Helvetica-Bold').fontSize(7.5).fillColor(brandDark).text('TERMS & CONDITIONS', leftMargin, currentY);
+      doc
+        .font('Helvetica')
+        .fontSize(7)
+        .fillColor(textSecondary)
+        .text('1. This document serves as official acknowledgement of fees received at RV Fitness, Narsobawadi.', leftMargin, currentY + 12)
+        .text('2. Membership subscriptions are strictly non-transferable and non-refundable unless authorized in writing.', leftMargin, currentY + 22)
+        .text('3. In case of discrepancies, please produce this original receipt within 7 days of settlement.', leftMargin, currentY + 32);
+
+      // Signatory
+      const sigX = leftMargin + pageWidth - 140;
+      doc.moveTo(sigX, currentY + 32).lineTo(sigX + 140, currentY + 32).lineWidth(0.75).stroke(textSecondary);
+      doc
+        .font('Helvetica-Bold')
+        .fontSize(8)
+        .fillColor(brandDark)
+        .text('Authorized Signatory', sigX, currentY + 36, { width: 140, align: 'center' });
+      doc
+        .font('Helvetica')
+        .fontSize(7)
+        .fillColor(textSecondary)
+        .text('RV Fitness, Narsobawadi', sigX, currentY + 46, { width: 140, align: 'center' });
+
+      // 8. Bottom Page Footnote
+      doc
+        .font('Helvetica')
+        .fontSize(6.5)
+        .fillColor('#9CA3AF')
+        .text(
+          `Document Ref: ${receipt.id.slice(0, 8).toUpperCase()}  •  Generated on ${new Date().toISOString()}  •  RV Fitness Automated Billing  •  Page 1 of 1`,
+          leftMargin,
+          795,
+          { width: pageWidth, align: 'center' }
+        );
 
       doc.end();
     });

@@ -40,12 +40,23 @@ export const downloadReceiptPdf = async (id: string, receiptNumber: string) => {
   const response = await api.get(`/receipts/${id}/pdf`, {
     responseType: 'blob',
   });
-  const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+  const blob = new Blob([response.data], { type: 'application/pdf' });
+  const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.setAttribute('download', `Receipt-${receiptNumber}.pdf`);
   document.body.appendChild(link);
   link.click();
   link.parentNode?.removeChild(link);
-  window.URL.revokeObjectURL(url);
+  setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+};
+
+export const previewReceiptPdf = async (id: string) => {
+  const response = await api.get(`/receipts/${id}/pdf?inline=true`, {
+    responseType: 'blob',
+  });
+  const blob = new Blob([response.data], { type: 'application/pdf' });
+  const url = window.URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  setTimeout(() => window.URL.revokeObjectURL(url), 60000);
 };

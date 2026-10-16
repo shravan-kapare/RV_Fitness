@@ -16,6 +16,7 @@ router.get('/my-history', authorize(UserRole.MEMBER), AttendanceController.getMy
 router.post('/scan', authorize(UserRole.ADMIN, UserRole.TRAINER), AttendanceController.scanQr);
 router.post('/manual', authorize(UserRole.ADMIN, UserRole.TRAINER), AttendanceController.manualCheckIn);
 router.get('/daily', authorize(UserRole.ADMIN, UserRole.TRAINER), AttendanceController.getDaily);
+router.get('/history', authorize(UserRole.ADMIN, UserRole.TRAINER), AttendanceController.searchHistory);
 router.get('/member/:memberId', authorize(UserRole.ADMIN, UserRole.TRAINER), AttendanceController.getMemberHistory);
 
 export default router;

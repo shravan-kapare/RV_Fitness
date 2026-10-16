@@ -80,4 +80,23 @@ export class AttendanceController {
       next(error);
     }
   }
+
+  public static async searchHistory(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+      const search = req.query.search as string | undefined;
+      const dateFrom = req.query.dateFrom as string | undefined;
+      const dateTo = req.query.dateTo as string | undefined;
+
+      const result = await AttendanceService.searchHistory({ page, limit, search, dateFrom, dateTo });
+      res.status(200).json({
+        success: true,
+        data: result.records,
+        pagination: result.pagination,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

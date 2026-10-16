@@ -43,20 +43,29 @@ export const DigitalIdCard: React.FC = () => {
         {/* Member Identity Details */}
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-[#F5F5F5]">{tokenData?.memberName || 'Member'}</h2>
-          <p className="text-xs font-mono tabular-nums text-[#FFC21A] mt-0.5 tracking-wider">
-            ID: {tokenData?.memberCode || 'RVF-MEMBER'}
-          </p>
+          <div className="flex items-center justify-center gap-2 mt-0.5">
+            <span className="text-xs font-mono tabular-nums text-[#FFC21A] tracking-wider">
+              ID: {tokenData?.memberCode || 'RVF-MEMBER'}
+            </span>
+            {tokenData?.planName && (
+              <>
+                <span className="text-zinc-600">•</span>
+                <span className="text-[11px] text-zinc-400 font-medium">{tokenData.planName}</span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Dynamic Rotating QR Code */}
         <div className="bg-white p-5 rounded-2xl inline-block shadow-inner mx-auto mb-6">
           {isLoading ? (
-            <div className="w-56 h-56 flex items-center justify-center">
-              <RefreshCw className="w-8 h-8 text-black animate-spin" />
+            <div className="w-56 h-56 flex flex-col items-center justify-center text-zinc-600 text-xs">
+              <RefreshCw className="w-8 h-8 text-[#FFC21A] animate-spin mb-2" />
+              <span>Generating Secure Pass...</span>
             </div>
-          ) : tokenData?.qrPayload ? (
+          ) : (tokenData?.qrPayload || tokenData?.token) ? (
             <QRCodeSVG
-              value={tokenData.qrPayload}
+              value={(tokenData.qrPayload || tokenData.token)!}
               size={220}
               level="H"
               includeMargin={false}
@@ -64,9 +73,12 @@ export const DigitalIdCard: React.FC = () => {
               fgColor="#000000"
             />
           ) : (
-            <div className="w-56 h-56 flex flex-col items-center justify-center text-black text-xs">
-              <AlertCircle className="w-8 h-8 text-red-500 mb-2" />
-              <span>Failed to load QR pass</span>
+            <div className="w-56 h-56 flex flex-col items-center justify-center text-zinc-800 text-xs p-4 text-center">
+              <AlertCircle className="w-8 h-8 text-amber-500 mb-2" />
+              <span className="font-bold text-sm">Pass Not Active</span>
+              <span className="text-[11px] text-zinc-500 mt-1 leading-snug">
+                An active gym membership is required for turnstile check-in. Please contact the front desk.
+              </span>
             </div>
           )}
         </div>

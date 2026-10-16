@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMembers } from '@/hooks/useMembers';
 import { useDailyAttendance } from '@/hooks/useAttendance';
 import { useRecordAssessment, useCreateWorkoutPlan, useCreateDietPlan } from '@/hooks/useFitness';
@@ -20,6 +21,7 @@ import {
   Flame,
   FileText,
   Target,
+  QrCode,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -212,7 +214,13 @@ export const TrainerDashboard: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Link to="/admin/attendance">
+            <Button variant="secondary" size="sm" className="text-xs font-bold uppercase tracking-wider">
+              <QrCode className="w-3.5 h-3.5 mr-1.5 text-[#FFC21A]" />
+              <span>Turnstile Scanner</span>
+            </Button>
+          </Link>
           <div className="px-3.5 py-2 rounded-xl bg-[#101014] border border-white/10 text-center">
             <span className="text-[10px] font-mono text-[#71717A] uppercase block font-semibold">Inside Gym Now</span>
             <span className="text-lg font-bold font-mono text-emerald-400 tabular-nums">

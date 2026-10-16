@@ -491,10 +491,13 @@ export interface Attendance {
 }
 
 export interface AttendanceQrToken {
-  qrPayload: string;
+  token?: string;
+  qrPayload?: string;
   expiresAt: string;
   memberCode: string;
   memberName: string;
+  hasActiveMembership?: boolean;
+  planName?: string;
 }
 
 // Fitness Types
