@@ -51,35 +51,44 @@ npm install
 cp .env.example backend/.env
 
 # Edit backend/.env with your database credentials and secrets
-# IMPORTANT: Change JWT_SECRET and JWT_REFRESH_SECRET to secure random values
+# For local XAMPP/MariaDB (default root has no password):
+# DATABASE_URL="mysql://root:@localhost:3306/rvfitness_dev?connection_limit=10"
 ```
 
-### 3. Set up the database
+### 3. Start Database & Set up Schema
 
+1. Ensure **MySQL 8.0+** or **MariaDB 10.4+** is running on port **3306**.
+   - If using XAMPP: Start via XAMPP Control Panel or run `N:\cyber\mysql_start.bat`.
+   - Direct daemon command: `& "N:\cyber\mysql\bin\mysqld.exe" --defaults-file="N:\cyber\mysql\bin\my.ini" --console`
+   - See detailed instructions: [`docs/LOCAL_SETUP_AND_TROUBLESHOOTING.md`](./docs/LOCAL_SETUP_AND_TROUBLESHOOTING.md)
+
+2. Generate client and synchronize schema:
 ```bash
 cd backend
 
-# Run database migrations
-npx prisma migrate dev
-
 # Generate Prisma client
-npx prisma generate
+npm run db:generate
 
-# Create the initial admin user
+# Synchronize database schema directly (DO NOT run prisma migrate dev on existing database)
+npm run db:push
+
+# Create the initial admin user (admin@rvfitness.com)
 npm run db:seed-admin
 
-# (Optional) Seed development data
+# (Optional) Seed complete gym development data (plans, trainers, members)
 npm run db:seed
 ```
 
 ### 4. Start the application
 
 ```bash
-# Terminal 1: Start backend
+# Terminal 1 (or Background): MySQL / MariaDB Server on port 3306
+
+# Terminal 2: Start backend API
 cd backend
 npm run dev
 
-# Terminal 2: Start frontend
+# Terminal 3: Start frontend UI
 cd frontend
 npm run dev
 ```
@@ -200,16 +209,21 @@ RV_Fitness/
 
 ---
 
-## Database Backup & Restore
+## Database Backup & Restore (MySQL / MariaDB)
 
-### Backup
-```bash
-pg_dump -U rvfitness -h localhost -d rvfitness_dev -F c -f backup_$(date +%Y%m%d).dump
+For enterprise backup schedules, binlog replication, and automated disaster recovery, refer to:
+👉 [**Database Backup & Restoration Guide** (`docs/BACKUP_RESTORE.md`)](./docs/BACKUP_RESTORE.md)
+
+### Quick Manual Backup (PowerShell / Bash)
+```powershell
+# Windows (PowerShell)
+$date = Get-Date -Format "yyyyMMdd_HHmmss"
+mysqldump -u root -h localhost -P 3306 --single-transaction --databases rvfitness_dev > "rvfitness_backup_$date.sql"
 ```
 
-### Restore
-```bash
-pg_restore -U rvfitness -h localhost -d rvfitness_dev -c backup_20241215.dump
+### Quick Restore
+```powershell
+mysql -u root -h localhost -P 3306 rvfitness_dev < "rvfitness_backup_TIMESTAMP.sql"
 ```
 
 ---
