@@ -2,18 +2,30 @@ param(
   [string]$DbName = "rvfitness_dev",
   [string]$DbUser = "root",
   [string]$DbPass = "",
-  [string]$BackupDir = "I:\Antigravity\RV_Fitness\backups",
+  [string]$BackupDir = (Join-Path $PSScriptRoot "..\backups"),
   [int]$RetentionDays = 30
 )
 
 # Resolve mysqldump executable
 $mysqldump = Get-Command "mysqldump" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
-if (-not $mysqldump -and (Test-Path "N:\cyber\mysql\bin\mysqldump.exe")) {
-  $mysqldump = "N:\cyber\mysql\bin\mysqldump.exe"
+if (-not $mysqldump) {
+  $candidateDumps = @(
+    "C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqldump.exe",
+    "C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqldump.exe",
+    "C:\xampp\mysql\bin\mysqldump.exe",
+    "D:\xampp\mysql\bin\mysqldump.exe",
+    "N:\cyber\mysql\bin\mysqldump.exe"
+  )
+  foreach ($p in $candidateDumps) {
+    if (Test-Path $p) {
+      $mysqldump = $p
+      break
+    }
+  }
 }
 
 if (-not $mysqldump) {
-  Write-Error "mysqldump utility could not be located."
+  Write-Error "mysqldump utility could not be located in PATH or standard MySQL/XAMPP paths."
   exit 1
 }
 

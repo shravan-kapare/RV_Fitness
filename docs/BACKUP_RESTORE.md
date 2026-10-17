@@ -82,7 +82,7 @@ param(
   [string]$DbName = "rvfitness_dev",
   [string]$DbUser = "root",
   [string]$DbPass = "",
-  [string]$BackupDir = "I:\Antigravity\RV_Fitness\backups",
+  [string]$BackupDir = (Join-Path $PSScriptRoot "..\backups"),
   [int]$RetentionDays = 30
 )
 

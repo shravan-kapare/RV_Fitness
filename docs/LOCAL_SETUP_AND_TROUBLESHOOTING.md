@@ -1,14 +1,14 @@
-# RV FITNESS — Local Setup, Database Architecture & Troubleshooting Guide
+# RV FITNESS — Universal Local Setup, Database Architecture & Troubleshooting Guide
 
 **Platform:** RV Fitness Full-Stack Gym Management System  
-**Target OS:** Windows 10 / 11 (PowerShell)  
-**Database Engines:** MySQL 8.0+ or MariaDB 10.4+ (InnoDB Engine)  
+**Supported OS:** Windows 10 / 11, macOS, Linux  
+**Database Engines:** MySQL 8.0+ or MariaDB 10.4+ (InnoDB Engine) or Docker  
 **Backend:** Node.js 20+ (Express + TypeScript + Prisma ORM)  
 **Frontend:** React 18 + TypeScript + Vite  
 
 ---
 
-## 1. Executive Summary: What Runs Under the Hood
+## 1. System Architecture Overview
 
 The RV Fitness application operates as a full-stack system communicating across three localhost services:
 
@@ -17,95 +17,126 @@ The RV Fitness application operates as a full-stack system communicating across 
 │     Frontend Client (Vite)      │  Port 5173 (http://localhost:5173)
 │   React 18 + TypeScript + SPA   │
 └────────────────┬────────────────┘
-                 │ Proxy: /api/* -> :3000
+                 │ Reverse Proxy: /api/* -> :3000
                  ▼
 ┌─────────────────────────────────┐
 │       Backend API Server        │  Port 3000 (http://localhost:3000)
-│ Express + TypeScript + Prisma   │  Health: /api/v1/health
+│ Express + TypeScript + Prisma   │  Health Check: /api/v1/health
 └────────────────┬────────────────┘
                  │ MySQL Connection (TCP)
                  ▼
 ┌─────────────────────────────────┐
 │   Database Server (InnoDB)      │  Port 3306 (localhost:3306)
-│   MariaDB 10.4.32 / MySQL 8.0+  │  Database: rvfitness_dev
+│   MySQL 8.0+ / MariaDB 10.4+    │  Database: rvfitness_dev
 └─────────────────────────────────┘
 ```
 
-### Verified Local Instance Details
-- **Active Database Engine:** MariaDB 10.4.32 (MySQL-compatible, x64 Windows binary distribution).
-- **Physical Installation Path:** `N:\cyber\mysql` (XAMPP control suite).
-- **Configuration File:** `N:\cyber\mysql\bin\my.ini`.
-- **Active Data Directory:** `N:\cyber\mysql\data\rvfitness_dev`.
-- **Database Connection URL:** `mysql://root:@localhost:3306/rvfitness_dev?connection_limit=10` (default XAMPP root user has no password).
-- **Schema Management Method:** Prisma Client + `prisma db push` (`npm run db:push`).
+### Supported Database Setups on Developer Laptops
+
+Team members can use whichever database setup suits their operating system:
+
+| Environment | Setup Method | Root Password | Connection URL in `backend/.env` |
+|:---|:---|:---|:---|
+| **Any OS (Docker)** | `docker compose up -d` | *None* | `mysql://root:@localhost:3306/rvfitness_dev?connection_limit=10` |
+| **Windows (MySQL 8.0 Installer)** | Windows Service (`MySQL80` / `MySQL`) | *Your set password* | `mysql://root:YourPassword@localhost:3306/rvfitness_dev?connection_limit=10` |
+| **Windows (XAMPP / MariaDB)** | XAMPP Control Panel | *None* | `mysql://root:@localhost:3306/rvfitness_dev?connection_limit=10` |
+| **macOS (Homebrew)** | `brew services start mysql` | *None or set* | `mysql://root:YourPassword@localhost:3306/rvfitness_dev?connection_limit=10` |
+| **Linux (apt / dnf)** | `sudo systemctl start mysql` | *None or set* | `mysql://root:YourPassword@localhost:3306/rvfitness_dev?connection_limit=10` |
+
+*(Note: On the project author's host workstation, MariaDB runs from `N:\cyber\mysql` with an empty root password).*
 
 ---
 
 ## 2. Why Manual `npx prisma migrate dev` Failed (Root Cause Analysis)
 
-When developers run `npx prisma migrate dev` and encounter:
+When team members run `npx prisma migrate dev` on an existing database and encounter:
 ```text
 Error: P1001: Can't reach database server at localhost:3306
 ```
-alongside a stopped Windows Service `MySQL80`, here is exactly why:
+or receive prompts to reset the database, here is why:
 
-### Root Cause 1: Orphaned Windows Service `MySQL80`
-Windows `services.msc` lists a service named `MySQL80` registered with the path:
-`"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqld.exe"`
-This executable does **not exist** on the filesystem (leftover registry entry from an older uninstalled MySQL installer). Because that service cannot start, relying on Windows to auto-start MySQL fails. The real database server resides in `N:\cyber\mysql\bin\mysqld.exe`.
+### Root Cause 1: Database Listener Was Not Running
+Prisma does not bundle an embedded database engine; it requires an active database listener on TCP port 3306. When MySQL/MariaDB or Docker is not running, port 3306 is closed, triggering Prisma error `P1001`.
 
-### Root Cause 2: MySQL Server Was Not Launched
-Prisma does not bundle an embedded database engine; it requires an active database listener on TCP port 3306. When `mysqld.exe` is not running, port 3306 is closed, triggering Prisma error `P1001`.
+### Root Cause 2: Orphaned Windows Service (Common Windows Issue)
+On some Windows machines, `services.msc` lists a service named `MySQL80` pointing to an uninstalled or non-existent path like `"C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqld.exe"`. If Windows fails to start that service, developers must either start their real MySQL binary (e.g. XAMPP, Docker) or clean up the orphaned service entry.
 
 ### Root Cause 3: Schema Synchronization Method (`db:push` vs `migrate dev`)
 The RV Fitness database schema contains 30+ tables and custom enums (`schema.prisma` has 990+ lines).
-- In development, the database schema was synchronized using **`prisma db push`** (`npm run db:push`).
-- The `_prisma_migrations` tracking table was intentionally not used, and only an initial scaffold migration (`20261014072555_init_mysql`) exists in `backend/prisma/migrations`.
-- **CRITICAL WARNING:** Running `prisma migrate dev` on a database with tables created via `prisma db push` will detect schema drift and prompt you to **reset the database** (`prisma migrate reset`), which will **permanently wipe all gym member, payment, and attendance records**. Always use `npm run db:push` in development.
+- In development, the database schema is synchronized using **`prisma db push`** (`npm run db:push`).
+- The `_prisma_migrations` tracking table is intentionally not used for rapid development iterations.
+- **CRITICAL WARNING:** Running `npx prisma migrate dev` on a database with tables created via `prisma db push` will detect schema drift and prompt you to **reset the database** (`prisma migrate reset`), which will **permanently wipe all gym member, payment, and attendance records**. Always use `npm run db:push` in development.
 
 ---
 
 ## 3. Starting and Stopping the Application
 
-To ensure smooth operation, the application services must be started in this exact order: **Database first, Backend second, Frontend third**.
+To ensure smooth operation, the application services should be started in this exact order: **Database first, Backend second, Frontend third**.
 
-### Option A: Manual Three-Terminal Sequence (Recommended)
+### Method 1: Automated Startup Scripts
+
+#### Windows (PowerShell):
+```powershell
+.\start-dev.ps1
+```
+*Features:*
+- Tests port 3306 first. If active (e.g. Docker or Windows Service), reuses it without spawning duplicates.
+- If port 3306 is closed, auto-detects MySQL/MariaDB from standard installation paths and launches it.
+- Launches Backend (`npm run dev`) and Frontend (`npm run dev`) in dedicated windows.
+
+#### Windows (Command Prompt / Batch):
+```cmd
+run.bat
+```
+
+#### macOS & Linux (Bash):
+```bash
+chmod +x start-dev.sh
+./start-dev.sh
+```
+
+---
+
+### Method 2: Manual Three-Terminal Sequence (All Operating Systems)
 
 #### **Terminal 1: Start Database Server (Port 3306)**
-Start your database server first so port 3306 is open and accepting TCP connections:
 
-```powershell
-# Verified local setup (MariaDB 10.4.32 on N: drive):
-& "N:\cyber\mysql\bin\mysqld.exe" --defaults-file="N:\cyber\mysql\bin\my.ini" --console
+Choose your database engine:
 
-# (Alternatively, via XAMPP batch file:)
-cd N:\cyber
-.\mysql_start.bat
-```
-*Expected Output:*
-```text
-[Note] InnoDB: 10.4.32 started; log sequence number ...
-[Note] Server socket created on IP: '::'.
-[Note] N:\cyber\mysql\bin\mysqld.exe: ready for connections.
-Version: '10.4.32-MariaDB'  port: 3306  mariadb.org binary distribution
-```
-*(Keep this terminal open while using the application)*
+- **Docker:**
+  ```bash
+  docker compose up -d
+  ```
+- **Windows MySQL Service:**
+  ```powershell
+  Start-Service MySQL
+  ```
+- **XAMPP (Windows):**
+  Start MySQL via the XAMPP Control Panel.
+- **macOS:**
+  ```bash
+  brew services start mysql
+  ```
+- **Linux:**
+  ```bash
+  sudo systemctl start mysql
+  ```
 
 #### **Terminal 2: Start Backend Server (Port 3000)**
-```powershell
-cd I:\Antigravity\RV_Fitness\backend
+```bash
+cd backend
 npm run dev
 ```
 *Expected Output:*
 ```text
 ✅ MySQL database connected successfully.
-[2026-10-17 11:02:23] info: 🚀 RV Fitness Billing API is running on port 3000
-[2026-10-17 11:02:23] info: 📋 API Health: http://localhost:3000/api/v1/health
+info: 🚀 RV Fitness Billing API is running on port 3000
+info: 📋 API Health: http://localhost:3000/api/v1/health
 ```
 
 #### **Terminal 3: Start Frontend Client (Port 5173)**
-```powershell
-cd I:\Antigravity\RV_Fitness\frontend
+```bash
+cd frontend
 npm run dev
 ```
 *Expected Output:*
@@ -116,94 +147,89 @@ npm run dev
 
 ---
 
-### Option B: Automated Startup Helper (`start-dev.ps1`)
-
-For convenience on Windows, you can run the repository startup script:
-```powershell
-cd I:\Antigravity\RV_Fitness
-.\start-dev.ps1
-```
-**Safety Features of `start-dev.ps1`:**
-1. Checks whether port 3306 is already listening before doing anything. If active, it skips database startup and never spawns duplicate instances.
-2. If port 3306 is closed, it launches MariaDB in a visible terminal so errors are not hidden.
-3. Launches backend and frontend in separate dedicated windows so dev logs and TypeScript compile errors remain visible.
-4. Does not terminate existing processes without consent and never hardcodes credentials.
-
----
-
 ### Stopping the Application Safely
 
 When finishing development work:
 1. **Frontend:** Press `Ctrl + C` in Terminal 3 (or close the Vite window).
 2. **Backend:** Press `Ctrl + C` in Terminal 2 (or close the Express window).
-3. **Database:** Press `Ctrl + C` in Terminal 1 (or run `N:\cyber\mysql_stop.bat`).
-   - MariaDB will perform an orderly shutdown, flush the InnoDB buffer pool, and exit cleanly:
-     `[Note] N:\cyber\mysql\bin\mysqld.exe: Shutdown complete`.
-   - *Never forcefully kill mysqld with `taskkill /F` unless it is completely unresponsive, to avoid InnoDB crash recovery on next boot.*
+3. **Database:**
+   - If using Docker: `docker compose down`
+   - If running in a console window: Press `Ctrl + C` for an orderly InnoDB buffer pool flush.
+   - If running as a service: Stop the service gracefully.
 
 ---
 
 ## 4. First-Time Setup on a New Developer Machine
 
-Follow this reproducible checklist when setting up RV Fitness on a clean Windows machine:
+Follow this reproducible checklist when setting up RV Fitness on any clean laptop:
 
 ### Step 1: Install Required Software
 1. **Node.js:** v20.x or v22.x LTS ([nodejs.org](https://nodejs.org/))
-2. **Git:** Windows Git ([git-scm.com](https://git-scm.com/))
-3. **Database Server:** Either:
-   - **MySQL Community Server 8.0+** ([dev.mysql.com](https://dev.mysql.com/downloads/mysql/)), OR
-   - **XAMPP / MariaDB 10.4+** ([apachefriends.org](https://www.apachefriends.org/))
+2. **Git:** ([git-scm.com](https://git-scm.com/))
+3. **Database Server:** Any of:
+   - **Docker Desktop** (Easiest — zero local DB install)
+   - **MySQL Community Server 8.0+**
+   - **XAMPP / MariaDB 10.4+**
 
 ### Step 2: Clone Repository & Install Dependencies
-```powershell
-git clone https://github.com/shravan-kapare/RV_Fitness.git I:\Antigravity\RV_Fitness
-cd I:\Antigravity\RV_Fitness
+```bash
+git clone https://github.com/shravan-kapare/RV_Fitness.git
+cd RV_Fitness
 
 # Install Backend dependencies
 cd backend
 npm install
 
 # Install Frontend dependencies
-cd ..\frontend
+cd ../frontend
 npm install
+
+cd ..
 ```
 
 ### Step 3: Configure Environment Variables
 Copy the example configuration file:
+
+**Windows PowerShell:**
 ```powershell
-cd I:\Antigravity\RV_Fitness
 Copy-Item .env.example backend\.env
 ```
-Open `backend\.env` and configure your database connection string:
-- **If using XAMPP / MariaDB (default root with no password):**
+
+**macOS / Linux:**
+```bash
+cp .env.example backend/.env
+```
+
+Open `backend/.env` and review your `DATABASE_URL`:
+- **Docker / XAMPP / MariaDB (root has no password):**
   ```env
   DATABASE_URL="mysql://root:@localhost:3306/rvfitness_dev?connection_limit=10"
   DATABASE_URL_TEST="mysql://root:@localhost:3306/rvfitness_test?connection_limit=5"
   ```
-- **If using standard MySQL 8.0 (with a root password):**
+- **Standard MySQL 8.0 (with a root password):**
   ```env
-  DATABASE_URL="mysql://root:YourRootPassword@localhost:3306/rvfitness_dev?connection_limit=10"
-  DATABASE_URL_TEST="mysql://root:YourRootPassword@localhost:3306/rvfitness_test?connection_limit=5"
+  DATABASE_URL="mysql://root:YourPassword@localhost:3306/rvfitness_dev?connection_limit=10"
+  DATABASE_URL_TEST="mysql://root:YourPassword@localhost:3306/rvfitness_test?connection_limit=5"
   ```
 
 ### Step 4: Create Database & Push Schema
-1. Start your MySQL / MariaDB server.
-2. Create the development and test databases if they do not exist:
-   ```powershell
-   # If using mysql CLI:
-   mysql -u root -e "CREATE DATABASE IF NOT EXISTS rvfitness_dev CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-   mysql -u root -e "CREATE DATABASE IF NOT EXISTS rvfitness_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+1. Start your database server (e.g. `docker compose up -d` or start your local MySQL service).
+2. If not using Docker, create the development and test databases:
+   ```bash
+   mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS rvfitness_dev CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+   mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS rvfitness_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
    ```
+   *(If your root has no password, omit `-p`)*
 3. Generate Prisma client & synchronize schema:
-   ```powershell
-   cd I:\Antigravity\RV_Fitness\backend
+   ```bash
+   cd backend
    npm run db:generate
    npm run db:push
    ```
    > ⚠️ **DO NOT run `prisma migrate dev`** on an existing database, as it will prompt to drop existing tables. Always use `npm run db:push`.
 
 ### Step 5: Seed Admin Account & Demo Data
-```powershell
+```bash
 # Create super-admin account (admin@rvfitness.com)
 npm run db:seed-admin
 
@@ -213,31 +239,29 @@ npm run db:seed
 
 ---
 
-## 5. Fixing the Windows MySQL Service Problem
+## 5. Fixing Windows MySQL Service Issues
 
-If you want Windows to automatically manage your MySQL/MariaDB service without manually keeping a terminal window open:
+If you are on Windows and an old `MySQL80` service entry fails to start because of a non-existent `C:\Program Files\...` path:
 
-### Option A: Remove the Broken `MySQL80` Service Entry
-The old `MySQL80` service points to a non-existent `C:\Program Files\...` path. Remove it using an **Elevated Administrator PowerShell**:
+### Remove an Orphaned Windows Service
+Run an **Elevated Administrator PowerShell**:
 ```powershell
-# Run PowerShell as Administrator:
 Stop-Service MySQL80 -ErrorAction SilentlyContinue
 sc.exe delete MySQL80
 ```
 
-### Option B: Register the Real MariaDB as a Windows Service
-To run the existing MariaDB from `N:\cyber\mysql` as a background Windows service:
+### Register a Local MySQL/MariaDB Binary as a Service
+If you want your local database to start automatically on Windows boot:
 ```powershell
 # Run PowerShell as Administrator:
-& "N:\cyber\mysql\bin\mysqld.exe" --install "MySQL" --defaults-file="N:\cyber\mysql\bin\my.ini"
+& "C:\path\to\mysqld.exe" --install "MySQL" --defaults-file="C:\path\to\my.ini"
 
-# Start the newly registered service:
+# Start the service:
 Start-Service MySQL
 
 # Verify it is running:
 Get-Service MySQL
 ```
-Once registered, MariaDB will start automatically on Windows boot, and port 3306 will always be available.
 
 ---
 
@@ -246,32 +270,29 @@ Once registered, MariaDB will start automatically on Windows boot, and port 3306
 Use these commands to verify that your system is functioning normally:
 
 ### 1. Check Port 3306 Accessibility
-```powershell
+```bash
+# Windows (PowerShell):
 Test-NetConnection -ComputerName localhost -Port 3306
+
+# macOS / Linux:
+nc -z 127.0.0.1 3306
 ```
-*Expected Result:* `TcpTestSucceeded : True`
+*Expected Result:* TCP port is open and listening.
 
 ### 2. Verify Database Connection & InnoDB Engine Support
 Test direct SQL connectivity and confirm that the InnoDB storage engine is available:
-```powershell
-# Verified local setup (MariaDB on N: drive):
-& "N:\cyber\mysql\bin\mysql.exe" -u root -h 127.0.0.1 -P 3306 -e "SELECT VERSION(); SHOW ENGINES;"
-
-# Standard portable setup (if mysql is on PATH):
+```bash
 mysql -u root -h 127.0.0.1 -P 3306 -e "SELECT VERSION(); SHOW ENGINES;"
 ```
-*Expected Output:*
-```text
-VERSION()
-10.4.32-MariaDB
-Engine    Support    Comment
-...
-InnoDB    DEFAULT    Supports transactions, row-level locking, foreign keys and encryption...
-```
+*(If your root user has a password, add `-p`)*
 
 ### 3. Verify API Health Endpoint
-```powershell
+```bash
+# PowerShell:
 Invoke-RestMethod -Uri "http://localhost:3000/api/v1/health" | ConvertTo-Json
+
+# Bash / curl:
+curl -s http://localhost:3000/api/v1/health
 ```
 *Expected Result:*
 ```json
@@ -283,9 +304,9 @@ Invoke-RestMethod -Uri "http://localhost:3000/api/v1/health" | ConvertTo-Json
 }
 ```
 
-### 3. Run Automated Vitest Test Suite
-```powershell
-cd I:\Antigravity\RV_Fitness\backend
+### 4. Run Automated Vitest Test Suite
+```bash
+cd backend
 npm test
 ```
 *Expected Result:* **8 test suites passed (50 tests passing)** covering financial arithmetic, PDF receipts, and QR security.
@@ -294,15 +315,15 @@ npm test
 
 ## 7. Troubleshooting Matrix
 
-| Issue | Root Cause | Solution |
-| :--- | :--- | :--- |
-| **`Error: P1001: Can't reach database server at localhost:3306`** | MySQL daemon is not running or port 3306 is closed. | Start MySQL using `& "N:\cyber\mysql\bin\mysqld.exe" --defaults-file="N:\cyber\mysql\bin\my.ini" --console` or start your Windows MySQL service. Check with `Test-NetConnection -Port 3306`. |
-| **`MySQL80 service fails to start: The system cannot find the file specified`** | Windows service points to `C:\Program Files\MySQL\...` which doesn't exist. | Remove the orphaned service (`sc.exe delete MySQL80`) and register the real binary (`N:\cyber\mysql\bin\mysqld.exe --install`). |
-| **`Error: Access denied for user 'root'@'localhost'`** | Password mismatch in `backend/.env`. | If using XAMPP/MariaDB, default password is blank (`mysql://root:@localhost:3306/...`). If MySQL 8.0, supply your set root password. |
-| **Prisma prompts: `Drift detected / We need to reset the database`** | Running `prisma migrate dev` on a database synchronized with `db push`. | **Do not agree to reset!** Cancel the command and run `npm run db:push` (`npx prisma db push`). |
-| **`Port 3000 already in use (EADDRINUSE)`** | An old backend Node process is still running. | Run `Get-Process -Name node \| Stop-Process` in PowerShell, then re-run `npm run dev`. |
-| **`Port 5173 already in use`** | Another Vite instance is running. | Vite will automatically switch to port 5174, or stop the older process with `Get-Process node \| Stop-Process`. |
-| **Receipt PDF download fails / 404** | Member has no active membership plan or invalid receipt ID. | Assign a membership plan to the member in Admin portal before issuing invoices. |
+| Issue | Root Cause | Universal Solution |
+|:---|:---|:---|
+| **`Error: P1001: Can't reach database server at localhost:3306`** | MySQL daemon is not running or port 3306 is closed. | Start your database (e.g. `docker compose up -d`, `Start-Service MySQL`, or start XAMPP). Verify with `Test-NetConnection -Port 3306` or `nc -z 127.0.0.1 3306`. |
+| **`MySQL80 service fails to start: The system cannot find the file specified`** | Windows service points to a deleted path. | Delete the orphaned service with `sc.exe delete MySQL80` and use Docker or register the valid binary. |
+| **`Error: Access denied for user 'root'@'localhost'`** | Password mismatch in `backend/.env`. | If using Docker/XAMPP, the default password is empty (`mysql://root:@localhost:3306/...`). If you installed MySQL Community Server with a password, provide it in `DATABASE_URL`. |
+| **Prisma prompts: `Drift detected / We need to reset the database`** | Running `prisma migrate dev` on a database synchronized with `db push`. | **Do not agree to reset!** Type `n` to cancel and run `npm run db:push` (`npx prisma db push`). |
+| **`Port 3000 already in use (EADDRINUSE)`** | An older backend Node process is still running. | Stop previous Node processes: Windows: `Get-Process node \| Stop-Process`, macOS/Linux: `pkill -f node`. Then re-run `npm run dev`. |
+| **`Port 5173 already in use`** | Another Vite instance is running. | Vite will automatically offer port 5174, or you can stop older instances. |
+| **Receipt PDF download fails / 404** | Member has no active membership plan or invalid receipt ID. | Assign an active membership plan to the member in Admin portal before issuing invoices. |
 | **"Failed to load QR pass" on Member Card** | Backend API is stopped or database connection is offline. | Verify API health at `http://localhost:3000/api/v1/health` and verify member has an active membership assigned. |
 
 ---
@@ -313,13 +334,17 @@ For comprehensive backup strategies, point-in-time recovery, and cron scheduling
 👉 [`docs/BACKUP_RESTORE.md`](./BACKUP_RESTORE.md)
 
 **Quick Manual Backup:**
-```powershell
+```bash
+# Windows PowerShell:
 $date = Get-Date -Format "yyyyMMdd_HHmmss"
-& "N:\cyber\mysql\bin\mysqldump.exe" -u root -h localhost -P 3306 --single-transaction --databases rvfitness_dev > "rvfitness_backup_$date.sql"
+mysqldump -u root -h localhost -P 3306 --single-transaction --databases rvfitness_dev > "backups/rvfitness_backup_$date.sql"
+
+# macOS / Linux:
+mysqldump -u root -h localhost -P 3306 --single-transaction --databases rvfitness_dev > "backups/rvfitness_backup_$(date +%Y%m%d_%H%M%S).sql"
 ```
 
 **Quick Restore:**
-```powershell
-& "N:\cyber\mysql\bin\mysql.exe" -u root -h localhost -P 3306 rvfitness_dev < "rvfitness_backup_YYYYMMDD_HHMMSS.sql"
+```bash
+mysql -u root -h localhost -P 3306 rvfitness_dev < backups/rvfitness_backup_YYYYMMDD_HHMMSS.sql
 ```
-*(Never use `pg_dump` or PostgreSQL tools; RV Fitness runs exclusively on MySQL/MariaDB InnoDB).*
+*(Always use MySQL/MariaDB tools; never use PostgreSQL tools like `pg_dump`).*
