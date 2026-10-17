@@ -42,8 +42,10 @@ backend/receipts/
 backend/invoices/
 *.pdf
 
-# Backups
+# Backups and Database Dumps
 backups/
+*.sql
+*.dump
 
 # Misc
 *.tgz

@@ -65,24 +65,33 @@ The RV Fitness database schema contains 30+ tables and custom enums (`schema.pri
 
 ---
 
-## 3. Starting the Application
+## 3. Starting and Stopping the Application
 
-### A. Quick Start for Existing Machine (3 Separate PowerShell Terminals)
+To ensure smooth operation, the application services must be started in this exact order: **Database first, Backend second, Frontend third**.
 
-#### **Terminal 1: Start Database (MariaDB / MySQL)**
-Run either the XAMPP batch script or the direct `mysqld` command:
+### Option A: Manual Three-Terminal Sequence (Recommended)
+
+#### **Terminal 1: Start Database Server (Port 3306)**
+Start your database server first so port 3306 is open and accepting TCP connections:
 
 ```powershell
-# Option 1: Direct mysqld daemon (recommended)
+# Verified local setup (MariaDB 10.4.32 on N: drive):
 & "N:\cyber\mysql\bin\mysqld.exe" --defaults-file="N:\cyber\mysql\bin\my.ini" --console
 
-# Option 2: Via XAMPP batch file
+# (Alternatively, via XAMPP batch file:)
 cd N:\cyber
 .\mysql_start.bat
 ```
-*Expected Output:* `[Note] N:\cyber\mysql\bin\mysqld.exe: ready for connections. Version: '10.4.32-MariaDB' port: 3306`
+*Expected Output:*
+```text
+[Note] InnoDB: 10.4.32 started; log sequence number ...
+[Note] Server socket created on IP: '::'.
+[Note] N:\cyber\mysql\bin\mysqld.exe: ready for connections.
+Version: '10.4.32-MariaDB'  port: 3306  mariadb.org binary distribution
+```
+*(Keep this terminal open while using the application)*
 
-#### **Terminal 2: Start Backend Server**
+#### **Terminal 2: Start Backend Server (Port 3000)**
 ```powershell
 cd I:\Antigravity\RV_Fitness\backend
 npm run dev
@@ -94,7 +103,7 @@ npm run dev
 [2026-10-17 11:02:23] info: 📋 API Health: http://localhost:3000/api/v1/health
 ```
 
-#### **Terminal 3: Start Frontend Client**
+#### **Terminal 3: Start Frontend Client (Port 5173)**
 ```powershell
 cd I:\Antigravity\RV_Fitness\frontend
 npm run dev
@@ -104,6 +113,33 @@ npm run dev
   VITE v8.3.4  ready in 766 ms
   ➜  Local:   http://localhost:5173/
 ```
+
+---
+
+### Option B: Automated Startup Helper (`start-dev.ps1`)
+
+For convenience on Windows, you can run the repository startup script:
+```powershell
+cd I:\Antigravity\RV_Fitness
+.\start-dev.ps1
+```
+**Safety Features of `start-dev.ps1`:**
+1. Checks whether port 3306 is already listening before doing anything. If active, it skips database startup and never spawns duplicate instances.
+2. If port 3306 is closed, it launches MariaDB in a visible terminal so errors are not hidden.
+3. Launches backend and frontend in separate dedicated windows so dev logs and TypeScript compile errors remain visible.
+4. Does not terminate existing processes without consent and never hardcodes credentials.
+
+---
+
+### Stopping the Application Safely
+
+When finishing development work:
+1. **Frontend:** Press `Ctrl + C` in Terminal 3 (or close the Vite window).
+2. **Backend:** Press `Ctrl + C` in Terminal 2 (or close the Express window).
+3. **Database:** Press `Ctrl + C` in Terminal 1 (or run `N:\cyber\mysql_stop.bat`).
+   - MariaDB will perform an orderly shutdown, flush the InnoDB buffer pool, and exit cleanly:
+     `[Note] N:\cyber\mysql\bin\mysqld.exe: Shutdown complete`.
+   - *Never forcefully kill mysqld with `taskkill /F` unless it is completely unresponsive, to avoid InnoDB crash recovery on next boot.*
 
 ---
 
@@ -215,7 +251,25 @@ Test-NetConnection -ComputerName localhost -Port 3306
 ```
 *Expected Result:* `TcpTestSucceeded : True`
 
-### 2. Verify API Health Endpoint
+### 2. Verify Database Connection & InnoDB Engine Support
+Test direct SQL connectivity and confirm that the InnoDB storage engine is available:
+```powershell
+# Verified local setup (MariaDB on N: drive):
+& "N:\cyber\mysql\bin\mysql.exe" -u root -h 127.0.0.1 -P 3306 -e "SELECT VERSION(); SHOW ENGINES;"
+
+# Standard portable setup (if mysql is on PATH):
+mysql -u root -h 127.0.0.1 -P 3306 -e "SELECT VERSION(); SHOW ENGINES;"
+```
+*Expected Output:*
+```text
+VERSION()
+10.4.32-MariaDB
+Engine    Support    Comment
+...
+InnoDB    DEFAULT    Supports transactions, row-level locking, foreign keys and encryption...
+```
+
+### 3. Verify API Health Endpoint
 ```powershell
 Invoke-RestMethod -Uri "http://localhost:3000/api/v1/health" | ConvertTo-Json
 ```

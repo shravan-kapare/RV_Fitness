@@ -24,87 +24,139 @@ Built as part of the gym management application suite. This module handles invoi
 
 ## Prerequisites
 
-- **Node.js** 20+ (LTS recommended)
-- **MySQL** 8.0+ or **MariaDB** 10.4+
-- **npm** 9+
+- **Node.js:** v20.x or v22.x LTS ([nodejs.org](https://nodejs.org/))
+- **Database Server:** **MySQL 8.0+** or **MariaDB 10.4+** (InnoDB storage engine)
+- **Package Manager:** **npm** v9+
+- **Operating System:** Windows 10/11, macOS, or Linux
 
 ---
 
 ## Quick Start
 
-### 1. Clone and install dependencies
+### 1. Clone and Install Dependencies
 
-```bash
+```powershell
 # Install backend dependencies
 cd backend
 npm install
 
 # Install frontend dependencies
-cd ../frontend
+cd ..\frontend
 npm install
 ```
 
-### 2. Configure environment
+### 2. Configure Environment
 
-```bash
-# Copy the example env file
-cp .env.example backend/.env
+Copy the example environment file and configure your local database connection:
 
-# Edit backend/.env with your database credentials and secrets
-# For local XAMPP/MariaDB (default root has no password):
-# DATABASE_URL="mysql://root:@localhost:3306/rvfitness_dev?connection_limit=10"
+```powershell
+cd I:\Antigravity\RV_Fitness
+Copy-Item .env.example backend\.env
 ```
 
-### 3. Start Database & Set up Schema
+- **For local XAMPP / MariaDB (default root has no password):**
+  ```env
+  DATABASE_URL="mysql://root:@localhost:3306/rvfitness_dev?connection_limit=10"
+  DATABASE_URL_TEST="mysql://root:@localhost:3306/rvfitness_test?connection_limit=5"
+  ```
+- **For standard MySQL 8.0 (with a root password):**
+  ```env
+  DATABASE_URL="mysql://root:YourPassword@localhost:3306/rvfitness_dev?connection_limit=10"
+  DATABASE_URL_TEST="mysql://root:YourPassword@localhost:3306/rvfitness_test?connection_limit=5"
+  ```
 
-1. Ensure **MySQL 8.0+** or **MariaDB 10.4+** is running on port **3306**.
-   - If using XAMPP: Start via XAMPP Control Panel or run `N:\cyber\mysql_start.bat`.
-   - Direct daemon command: `& "N:\cyber\mysql\bin\mysqld.exe" --defaults-file="N:\cyber\mysql\bin\my.ini" --console`
-   - See detailed instructions: [`docs/LOCAL_SETUP_AND_TROUBLESHOOTING.md`](./docs/LOCAL_SETUP_AND_TROUBLESHOOTING.md)
+### 3. Start Database Server (Port 3306)
 
-2. Generate client and synchronize schema:
-```bash
+Start your database server **first** so port 3306 is listening:
+
+- **Verified Local Machine Setup (MariaDB on `N:` drive):**
+  ```powershell
+  & "N:\cyber\mysql\bin\mysqld.exe" --defaults-file="N:\cyber\mysql\bin\my.ini" --console
+  ```
+  *(Keep this terminal open while using the application)*
+- **Portable Setup for Other Developers:**
+  - If using standard Windows MySQL Service: `Start-Service MySQL` (or start via `services.msc`).
+  - If using XAMPP on `C:` drive: Start MySQL via XAMPP Control Panel or `C:\xampp\mysql_start.bat`.
+  - If using Docker: `docker run --name rv-mysql -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_DATABASE=rvfitness_dev -p 3306:3306 -d mysql:8.0`
+
+**Verify Database Connection:**
+```powershell
+# Test TCP listener:
+Test-NetConnection -ComputerName localhost -Port 3306
+
+# Test SQL connection & InnoDB support:
+# (On verified local setup:)
+& "N:\cyber\mysql\bin\mysql.exe" -u root -h 127.0.0.1 -P 3306 -e "SELECT VERSION(); SHOW ENGINES;"
+# (Or using standard PATH mysql:)
+mysql -u root -h 127.0.0.1 -P 3306 -e "SELECT VERSION(); SHOW ENGINES;"
+```
+
+### 4. Initialize Database Schema & Seed Data
+
+> ⚠️ **IMPORTANT: Use `npm run db:push`, DO NOT run `prisma migrate dev`.**  
+> The application schema contains 30+ tables and custom enums synchronized via `prisma db push`. Running `prisma migrate dev` on an existing database will detect schema drift and prompt you to **reset the database**, which will **permanently erase existing members and payment records**.
+
+```powershell
 cd backend
 
 # Generate Prisma client
 npm run db:generate
 
-# Synchronize database schema directly (DO NOT run prisma migrate dev on existing database)
+# Synchronize database schema safely
 npm run db:push
 
-# Create the initial admin user (admin@rvfitness.com)
+# Create super-admin account (admin@rvfitness.com)
 npm run db:seed-admin
 
-# (Optional) Seed complete gym development data (plans, trainers, members)
+# (Optional) Seed complete gym demo data (plans, trainers, members)
 npm run db:seed
 ```
 
-### 4. Start the application
+### 5. Start the Application
 
-```bash
-# Terminal 1 (or Background): MySQL / MariaDB Server on port 3306
+You can start all services either using the **verified manual 3-terminal procedure** (recommended for full log visibility) or the **automated helper script**:
 
-# Terminal 2: Start backend API
-cd backend
-npm run dev
+#### Option A: Manual Three-Terminal Procedure (Recommended)
+Open three separate terminals in this exact order:
 
-# Terminal 3: Start frontend UI
-cd frontend
-npm run dev
+1. **Terminal 1 (Database):** Start MySQL/MariaDB on port 3306.
+2. **Terminal 2 (Backend API):**
+   ```powershell
+   cd I:\Antigravity\RV_Fitness\backend
+   npm run dev
+   ```
+3. **Terminal 3 (Frontend Client):**
+   ```powershell
+   cd I:\Antigravity\RV_Fitness\frontend
+   npm run dev
+   ```
+
+#### Option B: Automated Startup Helper (Windows PowerShell)
+```powershell
+cd I:\Antigravity\RV_Fitness
+.\start-dev.ps1
 ```
+*Checks port 3306 first, starts MariaDB if needed, and launches backend and frontend in dedicated windows.*
 
-The application will be available at:
-- **Frontend:** http://localhost:5173
-- **Backend API:** http://localhost:3000
-- **API Health:** http://localhost:3000/api/v1/health
+---
 
-### 5. Login
+## Application Access Points
 
-Use the admin credentials configured in your `.env` file:
-- **Email:** admin@rvfitness.com (or your configured ADMIN_EMAIL)
-- **Password:** The ADMIN_PASSWORD you set in `.env`
+| Component | URL | Description |
+| :--- | :--- | :--- |
+| **Public Website** | [http://localhost:5173](http://localhost:5173) | Gym homepage, memberships, facilities, trainers |
+| **Portal Login** | [http://localhost:5173/login](http://localhost:5173/login) | Unified login for Admin, Trainer, and Member accounts |
+| **Backend API** | [http://localhost:3000](http://localhost:3000) | Express REST API gateway |
+| **API Health Check** | [http://localhost:3000/api/v1/health](http://localhost:3000/api/v1/health) | Live system & database connection status |
 
-> ⚠️ **Change the default admin password immediately after first login.**
+### Default Seed Credentials
+
+- **Admin:** `admin@rvfitness.com` / `Admin@123456`
+- **Trainer:** `trainer@rvfitness.com` / `Trainer@123456`
+- **Member:** `rohit.shinde@example.com` / `Member@123456`
+
+For advanced setup, Windows service repair, and troubleshooting, see:  
+👉 [**Local Setup & Troubleshooting Guide** (`docs/LOCAL_SETUP_AND_TROUBLESHOOTING.md`)](./docs/LOCAL_SETUP_AND_TROUBLESHOOTING.md)
 
 ---
 
